@@ -1,0 +1,75 @@
+# CRE — Open Source Edition
+#
+# Services: CRE daemon · Demo agent · Attack scenario dashboard
+#
+# Quick start:
+#   cp .env.oss.example .env.oss
+#   # Add ANTHROPIC_API_KEY and BRAVE_API_KEY to .env.oss
+#   docker compose -f docker-compose.oss.yml up --build
+#
+# Dashboard: http://localhost:3000
+# CRE API:   http://localhost:8080
+# Demo agent: http://localhost:8081
+
+services:
+
+  # ── CRE Daemon ──────────────────────────────────────────────────────────────
+  cre:
+    build:
+      context: .
+      dockerfile: demo/Dockerfile.cre
+    env_file:
+      - path: .env.oss
+        required: false
+    environment:
+      CTXFW_CONFIG: /app/ctxfw.oss.yaml
+    volumes:
+      - cre-oss-data:/app/.ctxfw
+      - ./ctxfw.oss.yaml:/app/ctxfw.oss.yaml:ro
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+
+  # ── Demo Agent (Brave Search + Claude) ─────────────────────────────────────
+  agent:
+    build:
+      context: ./demo
+      dockerfile: Dockerfile.agent
+    env_file:
+      - path: .env.oss
+        required: false
+    environment:
+      CRE_API_URL: http://cre:8080
+    ports:
+      - "8081:8081"
+    depends_on:
+      cre:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8081/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    restart: unless-stopped
+
+  # ── Demo Dashboard (static HTML, no build step) ─────────────────────────────
+  dashboard:
+    image: nginx:1.27-alpine
+    ports:
+      - "3000:80"
+    volumes:
+      - ./demo/dashboard:/usr/share/nginx/html:ro
+    depends_on:
+      agent:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  cre-oss-data:

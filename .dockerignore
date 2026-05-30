@@ -1,0 +1,37 @@
+# Git history — large, not needed in any image
+.git
+.gitignore
+
+# Python dev artifacts
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.ruff_cache
+.mypy_cache
+dist/
+build/
+*.egg-info/
+.venv/
+venv/
+
+# Node / webapp — only needed in the webapp stage
+# (The Dockerfile.webapp copies from webapp/ explicitly)
+webapp/node_modules
+webapp/.next
+
+# Spec and docs
+*.md
+openspec/
+
+# Local secrets — explicit at every level
+.env*
+*.env
+**/.env*
+**/*.env
+
+# Editor
+.vscode/
+.idea/
+*.swp

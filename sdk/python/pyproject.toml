@@ -1,0 +1,39 @@
+[build-system]
+requires = ["hatchling>=1.21"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cre-sdk"
+version = "0.1.0"
+description = "CRE SDK — drop-in wrapper for Anthropic and OpenAI with context firewall enforcement"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "Context Firewall", email = "sumesh.punakkal@gmail.com" },
+]
+keywords = ["ai", "security", "context-firewall", "anthropic", "openai", "governance"]
+
+dependencies = [
+    "httpx>=0.27",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+anthropic = ["anthropic>=0.25"]
+openai = ["openai>=1.0"]
+all = ["anthropic>=0.25", "openai>=1.0"]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.24", "anthropic>=0.25", "openai>=1.0", "httpx>=0.27"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cre_sdk"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100

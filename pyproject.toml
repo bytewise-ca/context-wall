@@ -1,0 +1,82 @@
+[build-system]
+requires = ["hatchling>=1.21"]
+build-backend = "hatchling.build"
+
+[project]
+name = "contextwall"
+version = "0.1.0"
+description = "ContextWall — context firewall for AI agents and RAG pipelines"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "AGPL-3.0-or-later" }
+authors = [
+    { name = "ContextWall", email = "info@bytewise.ca" },
+]
+keywords = ["mcp", "claude", "context", "llm", "ai-agents", "context-firewall", "rag", "prompt-injection", "trust-scoring"]
+
+dependencies = [
+    # web framework
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    # mcp server
+    "fastmcp>=2.0",
+    # data validation
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    # database
+    "aiosqlite>=0.19",
+    "kuzu>=0.3",
+    "duckdb>=0.10",
+    # scheduling & watching
+    "apscheduler>=3.10",
+    "watchdog>=3.0",
+    # config
+    "pyyaml>=6.0",
+    # cli
+    "click>=8.0",
+    "rich>=13.0",
+    "httpx>=0.27",
+    # runtime correlation
+    "opentelemetry-sdk>=1.20",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.20",
+    "grpcio>=1.60",
+    "rapidfuzz>=3.0",
+    "tdigest>=0.5",
+    # cryptographic signing for compliance bundles
+    "cryptography>=42.0",
+    # observability
+    "prometheus-client>=0.20",
+    # object storage archival
+    "aiobotocore>=2.0",
+    # context-compiler (direct Python import)
+    "context-compiler-mcp",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.4",
+    "httpx>=0.27",
+]
+
+[project.scripts]
+ctxfw = "context_firewall.cli.main:cli"
+ctxfwd = "context_firewall.daemon.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/context_firewall"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+src = ["src"]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]

@@ -1,0 +1,34 @@
+repository_root: /app
+
+# ── Sources ───────────────────────────────────────────────────────────────────
+# Declare all context sources and their trust tier here.
+# On startup CRE registers these automatically — no API calls needed.
+sources:
+  - id: brave-web-search
+    type: web
+    trust_tier: untrusted
+  - id: internal-confluence
+    type: confluence
+    trust_tier: internal
+    data_classification: internal_code
+
+# ── Detection ─────────────────────────────────────────────────────────────────
+detection:
+  injection_block_threshold: 0.55   # heuristic confidence >= this → block
+  injection_warn_threshold: 0.35    # heuristic confidence >= this → audit log
+  default_source_trust_tier: untrusted
+
+# ── Enforcement ───────────────────────────────────────────────────────────────
+enforcement:
+  penalty_increment: 0.15           # added to penalty per deny event
+  decay_half_life_days: 1.0         # penalty halves every N days
+  reward_factor: 0.90               # penalty × this per positive outcome
+
+rest_api:
+  port: 8080
+  auth:
+    enabled: false
+storage:
+  db_path: /app/.ctxfw/demo.db
+graph:
+  max_nodes: 20

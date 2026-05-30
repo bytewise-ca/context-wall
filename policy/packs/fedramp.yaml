@@ -1,0 +1,63 @@
+# FedRAMP Moderate Compliance Policy Pack
+# Covers NIST 800-53 Rev 5 controls: AU-2, AU-9, AC-3, SI-3
+# Task 11.11
+
+rules:
+  - name: fedramp-au2-audit-events
+    action: audit-only
+    reason: "FedRAMP AU-2: all policy-relevant events logged as audit records"
+    compliance_mapping:
+      framework: fedramp
+      control_id: AU-2
+      description: "Audit Events — identify events that require auditing"
+
+  - name: fedramp-au9-audit-protection
+    action: audit-only
+    reason: "FedRAMP AU-9: audit information protected from unauthorized access"
+    applies_when:
+      source_tier: regulated
+    condition:
+      field: source_tier
+      op: eq
+      value: regulated
+    compliance_mapping:
+      framework: fedramp
+      control_id: AU-9
+      description: "Protection of Audit Information — protect audit records from modification"
+
+  - name: fedramp-ac3-access-enforcement
+    action: deny
+    reason: "FedRAMP AC-3: access enforcement — secret or sensitive content blocked"
+    condition:
+      or:
+        - field: content
+          op: matches
+          value: 'AKIA[0-9A-Z]{16}'
+        - field: content
+          op: matches
+          value: '-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----'
+        - field: content
+          op: matches
+          value: '(?i)(api_key|apikey)\s*[:=]\s*[A-Za-z0-9_\-]{20,}'
+    compliance_mapping:
+      framework: fedramp
+      control_id: AC-3
+      description: "Access Enforcement — enforce access control policies"
+
+  - name: fedramp-si3-malicious-code
+    action: deny
+    reason: "FedRAMP SI-3: malicious code protection — injection pattern blocked from untrusted source"
+    applies_when:
+      source_tier: untrusted
+    condition:
+      and:
+        - field: source_tier
+          op: eq
+          value: untrusted
+        - field: content
+          op: matches
+          value: '(?i)(ignore\s+(all\s+)?(previous|prior)\s+instructions?|disregard|new\s+task\s*:)'
+    compliance_mapping:
+      framework: fedramp
+      control_id: SI-3
+      description: "Malicious Code Protection — implement malicious code protection mechanisms"

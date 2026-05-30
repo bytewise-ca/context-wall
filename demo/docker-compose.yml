@@ -1,0 +1,47 @@
+services:
+  cre:
+    build:
+      context: ..
+      dockerfile: demo/Dockerfile.cre
+    env_file: .env
+    environment:
+      - CTXFW_CONFIG=/app/demo/ctxfw.demo.yaml
+    ports:
+      - "8080:8080"
+    volumes:
+      - cre-data:/app/.ctxfw
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+    env_file: .env
+    environment:
+      - CRE_API_URL=http://cre:8080
+    ports:
+      - "8081:8081"
+    depends_on:
+      cre:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  dashboard:
+    image: nginx:alpine
+    ports:
+      - "3000:80"
+    volumes:
+      - ./dashboard:/usr/share/nginx/html:ro
+    depends_on:
+      - agent
+
+volumes:
+  cre-data:

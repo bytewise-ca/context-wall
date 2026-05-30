@@ -1,0 +1,55 @@
+# HIPAA Compliance Policy Pack
+# Covers 45 CFR 164 Security Rule requirements for AI context governance
+# Task 11.9
+
+rules:
+  - name: hipaa-minimum-necessary
+    action: deny
+    reason: "HIPAA minimum-necessary standard: regulated PHI source blocked for non-permitted task scope"
+    applies_when:
+      source_tier: regulated
+    condition:
+      and:
+        - field: source_tier
+          op: eq
+          value: regulated
+        - field: task_scope
+          op: neq
+          value: patient_care
+    compliance_mapping:
+      framework: hipaa
+      control_id: "45 CFR 164.502(b)"
+      description: "Minimum Necessary Standard — limit PHI use to minimum required"
+
+  - name: hipaa-audit-control
+    action: audit-only
+    reason: "HIPAA audit control: all policy actions on regulated sources logged with HIPAA reference"
+    applies_when:
+      source_tier: regulated
+    condition:
+      field: source_tier
+      op: eq
+      value: regulated
+    compliance_mapping:
+      framework: hipaa
+      control_id: "45 CFR 164.312(b)"
+      description: "Audit Controls — implement mechanisms to record and examine activity"
+
+  - name: hipaa-phi-content-block
+    action: redact
+    reason: "HIPAA PHI pattern detected in context content"
+    condition:
+      or:
+        - field: content
+          op: matches
+          value: '\b\d{3}-\d{2}-\d{4}\b'
+        - field: content
+          op: matches
+          value: 'MRN[:\s#]*\d{5,10}'
+        - field: content
+          op: matches
+          value: 'DOB[:\s]*\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4}'
+    compliance_mapping:
+      framework: hipaa
+      control_id: "45 CFR 164.514(d)"
+      description: "Minimum Necessary — workforce access limited to minimum PHI"

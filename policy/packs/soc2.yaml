@@ -1,0 +1,58 @@
+# SOC2 Type II Compliance Policy Pack
+# Covers CC6, CC7, CC8 Trust Service Criteria
+# Task 11.10
+
+rules:
+  - name: soc2-cc6-logical-access
+    action: deny
+    reason: "SOC2 CC6.1: untrusted sources blocked from accessing internal data"
+    condition:
+      and:
+        - field: source_tier
+          op: eq
+          value: untrusted
+        - field: trust_score
+          op: lt
+          value: 0.3
+    compliance_mapping:
+      framework: soc2
+      control_id: CC6.1
+      description: "Logical and Physical Access Controls — restrict access to authorized users"
+
+  - name: soc2-cc6-external-threats
+    action: deny
+    reason: "SOC2 CC6.6: external threat — untrusted source injection attempt blocked"
+    applies_when:
+      source_tier: untrusted
+    condition:
+      field: source_tier
+      op: eq
+      value: untrusted
+    compliance_mapping:
+      framework: soc2
+      control_id: CC6.6
+      description: "Logical and Physical Access Controls — protect against external threats"
+
+  - name: soc2-cc7-system-monitoring
+    action: audit-only
+    reason: "SOC2 CC7.2: policy action logged for system monitoring"
+    compliance_mapping:
+      framework: soc2
+      control_id: CC7.2
+      description: "System Operations — monitor system components for anomalies"
+
+  - name: soc2-cc8-change-management
+    action: audit-only
+    reason: "SOC2 CC8.1: context bundle change logged for change management evidence"
+    compliance_mapping:
+      framework: soc2
+      control_id: CC8.1
+      description: "Change Management — authorize, design, develop, configure changes"
+
+  - name: soc2-policy-action-logging
+    action: audit-only
+    reason: "SOC2 CC7.2/CC8.1: all policy action types logged"
+    compliance_mapping:
+      framework: soc2
+      control_id: CC7.2
+      description: "System Monitoring — all policy enforcement events logged"

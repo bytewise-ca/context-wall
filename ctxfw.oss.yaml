@@ -1,0 +1,68 @@
+# CRE — OSS configuration
+# Used by docker-compose.oss.yml
+repository_root: /app
+
+# ── Sources ───────────────────────────────────────────────────────────────────
+# Declare context sources here. CRE registers them on every startup (idempotent).
+# trust_tier: internal | external | untrusted | regulated
+sources: []
+
+# ── Detection ─────────────────────────────────────────────────────────────────
+detection:
+  injection_block_threshold: 0.55
+  injection_warn_threshold: 0.35
+  default_source_trust_tier: untrusted
+
+# ── Enforcement ───────────────────────────────────────────────────────────────
+enforcement:
+  penalty_increment: 0.15
+  decay_half_life_days: 1.0
+  reward_factor: 0.90
+
+# ── Compliance framework mappings ─────────────────────────────────────────────
+# Maps data_classification substrings to compliance frameworks.
+# Add your own classifications here.
+compliance:
+  classification_frameworks:
+    phi: [hipaa]
+    pii: [hipaa, gdpr]
+    pci: [pci-dss]
+    financial: [sox, fedramp]
+    federal: [fedramp]
+    classified: [fedramp]
+    sensitive: [soc2]
+    internal_code: []
+
+# ── Control plane (optional) ──────────────────────────────────────────────────
+# Connect to the ContextWall managed control plane for fleet-wide visibility.
+# Leave url empty to run fully local (no data leaves this host).
+# Get a registration token from https://app.contextwall.dev → Settings.
+control_plane:
+  url: ""
+  registration_token: "${CRE_CONTROL_PLANE_TOKEN:-}"
+  daemon_name: "oss-daemon"
+  push_interval_seconds: 60
+  heartbeat_interval_seconds: 30
+
+rest_api:
+  port: 8080
+  auth:
+    enabled: false
+
+mcp:
+  transport: stdio
+
+graph:
+  max_depth: 4
+  max_nodes: 50
+  trust_cutoff: 0.30
+
+storage:
+  db_path: /app/.ctxfw/cre.db
+
+policy:
+  policy_dir: /app/.ctxfw/policies
+
+daemon:
+  pid_file: /app/.ctxfw/cre.pid
+  jobs: {}

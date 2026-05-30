@@ -1,0 +1,93 @@
+# ContextWall — configuration example
+# Copy to ctxfw.yaml and adjust for your environment.
+# All screening runs locally. Prompts and documents never leave this host.
+
+repository_root: /app
+
+# ---------------------------------------------------------------------------
+# Context sources — declare every source your agents pull from.
+# ContextWall enforces your policy per trust_tier, with no code changes to
+# your agents required.
+# ---------------------------------------------------------------------------
+sources:
+  - id: brave-web-search
+    type: web
+    trust_tier: untrusted          # full injection + PII detection
+
+  - id: internal-confluence
+    type: confluence
+    trust_tier: internal           # injection blocked, PII audit-only
+    data_classification: sensitive
+
+  - id: fhir-api
+    type: api
+    trust_tier: regulated          # injection + PII blocked, full compliance audit
+    data_classification: phi
+    owner: clinical-data-team
+    region: us-east-1
+
+# ---------------------------------------------------------------------------
+# Detection thresholds — tune per environment.
+# ---------------------------------------------------------------------------
+detection:
+  injection_block_threshold: 0.55  # raise to reduce false positives
+  injection_warn_threshold: 0.35   # lower to catch more, audit instead of block
+  default_source_trust_tier: untrusted
+
+enforcement:
+  penalty_increment: 0.15          # trust penalty per deny event
+  decay_half_life_days: 1.0        # penalty halves every N days (auto-recovery)
+  reward_factor: 0.90              # trust improves with clean outcomes
+
+# ---------------------------------------------------------------------------
+# REST API — local screening endpoint your agents call.
+# ---------------------------------------------------------------------------
+rest_api:
+  port: 8080
+  auth:
+    enabled: true
+    tokens:
+      - token: "${CRE_API_TOKEN}"
+        name: admin
+        scopes: [analyze, filter, admin, compliance]
+
+# ---------------------------------------------------------------------------
+# Policy — local YAML rules, hot-reloaded within 5 seconds.
+# ---------------------------------------------------------------------------
+policy:
+  policy_dir: /data/policies
+
+# ---------------------------------------------------------------------------
+# Storage — append-only Merkle-chained audit log.
+# ---------------------------------------------------------------------------
+storage:
+  db_path: /data/cre.db
+
+# ---------------------------------------------------------------------------
+# Compliance — HMAC key for tamper-evident export signatures.
+# Generate with: python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+# ---------------------------------------------------------------------------
+compliance_hmac_key: "${CRE_COMPLIANCE_HMAC_KEY}"
+
+# ---------------------------------------------------------------------------
+# Cloud control plane — OPTIONAL. Leave this section out to run fully offline.
+# The daemon pushes only aggregated metadata (counts, scores) — never content.
+# ---------------------------------------------------------------------------
+# control_plane:
+#   url: https://app.contextwall.dev
+#   registration_token: cwt_your-token-from-settings
+#   daemon_name: prod-us-east-1
+
+# ---------------------------------------------------------------------------
+# Provenance — enforcement event retention.
+# ---------------------------------------------------------------------------
+provenance:
+  session_timeout_min: 30
+  archival_after_days: 90
+
+# ---------------------------------------------------------------------------
+# Daemon internals.
+# ---------------------------------------------------------------------------
+daemon:
+  pid_file: /data/ctxfw.pid
+  shutdown_timeout_sec: 30

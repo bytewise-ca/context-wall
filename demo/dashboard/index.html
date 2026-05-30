@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRE Context Firewall — Demo</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'SF Mono', 'Fira Code', monospace; background: #0d1117; color: #e6edf3; min-height: 100vh; }
+
+  /* Mode banner */
+  #mode-banner {
+    padding: 14px 24px; font-size: 15px; font-weight: 700; letter-spacing: 0.05em;
+    text-align: center; text-transform: uppercase;
+  }
+  .protected { background: #1a4731; color: #3fb950; border-bottom: 2px solid #3fb950; }
+  .unprotected { background: #4a1515; color: #f85149; border-bottom: 2px solid #f85149; }
+
+  /* Layout */
+  .container { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px; max-width: 1400px; margin: 0 auto; }
+  @media (max-width: 900px) { .container { grid-template-columns: 1fr; } }
+
+  /* Panels */
+  .panel { background: #161b22; border: 1px solid #30363d; border-radius: 8px; overflow: hidden; }
+  .panel-header { padding: 12px 16px; background: #21262d; border-bottom: 1px solid #30363d; font-size: 12px; font-weight: 700; color: #8b949e; letter-spacing: 0.08em; text-transform: uppercase; display: flex; align-items: center; justify-content: space-between; }
+  .panel-body { padding: 12px; max-height: 400px; overflow-y: auto; }
+
+  /* Scenario buttons */
+  .scenarios { display: flex; gap: 10px; padding: 16px; }
+  .btn {
+    padding: 10px 20px; border: 1px solid #30363d; border-radius: 6px; cursor: pointer;
+    font-family: inherit; font-size: 13px; font-weight: 600; transition: all 0.15s;
+    background: #21262d; color: #e6edf3;
+  }
+  .btn:hover { background: #30363d; border-color: #8b949e; }
+  .btn-attack { border-color: #f85149; color: #f85149; }
+  .btn-attack:hover { background: #4a1515; }
+  .btn-search { border-color: #58a6ff; color: #58a6ff; }
+  .btn-search:hover { background: #0d2139; }
+
+  /* Artifact feed items */
+  .artifact { padding: 10px 12px; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid; font-size: 12px; animation: fadeIn 0.3s ease; }
+  .artifact.allowed { background: #0d2013; border-color: #3fb950; }
+  .artifact.blocked { background: #2d0f0f; border-color: #f85149; }
+  .artifact.unfiltered { background: #1c1a10; border-color: #f0883e; }
+  .artifact-url { color: #8b949e; margin-bottom: 4px; word-break: break-all; }
+  .artifact-badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px; }
+  .badge-allowed { background: #1a4731; color: #3fb950; }
+  .badge-blocked { background: #4a1515; color: #f85149; }
+  .badge-unfiltered { background: #3d2e08; color: #f0883e; }
+  .artifact-rule { color: #f0883e; font-size: 11px; margin-top: 4px; }
+  .artifact-tier { color: #8b949e; font-size: 10px; margin-top: 2px; }
+
+  /* Provenance trail */
+  .trail-item { padding: 8px 12px; border-radius: 5px; background: #21262d; margin-bottom: 6px; font-size: 11px; }
+  .trail-type { color: #58a6ff; font-weight: 700; margin-bottom: 3px; }
+  .trail-detail { color: #8b949e; }
+
+  /* Response panel */
+  #response-text { white-space: pre-wrap; font-size: 12px; line-height: 1.6; color: #e6edf3; }
+  .response-meta { font-size: 11px; color: #8b949e; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #30363d; }
+
+  /* Stats bar */
+  .stats { display: flex; gap: 24px; padding: 12px 16px; background: #161b22; border-top: 1px solid #30363d; font-size: 12px; }
+  .stat { display: flex; flex-direction: column; gap: 2px; }
+  .stat-label { color: #8b949e; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .stat-value { color: #e6edf3; font-weight: 700; font-size: 16px; }
+  .stat-value.green { color: #3fb950; }
+  .stat-value.red { color: #f85149; }
+
+  /* Search bar */
+  .search-row { display: flex; gap: 8px; padding: 16px; }
+  .search-input { flex: 1; padding: 10px 14px; background: #21262d; border: 1px solid #30363d; border-radius: 6px; color: #e6edf3; font-family: inherit; font-size: 13px; }
+  .search-input:focus { outline: none; border-color: #58a6ff; }
+
+  /* Empty state */
+  .empty { color: #8b949e; text-align: center; padding: 32px; font-size: 12px; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+  ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: #0d1117; } ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div id="mode-banner" class="protected">🔒 PROTECTED — CRE Context Firewall Active</div>
+
+<div class="scenarios">
+  <button class="btn btn-attack" onclick="runScenario(1)">▶ Scenario 1: Instruction Override</button>
+  <button class="btn btn-attack" onclick="runScenario(2)">▶ Scenario 2: Goal Hijack</button>
+  <button class="btn btn-attack" onclick="runScenario(3)">▶ Scenario 3: Fact Injection</button>
+</div>
+
+<div class="search-row">
+  <input class="search-input" id="search-input" placeholder="Or enter a search query to try the live agent..." onkeydown="if(event.key==='Enter') runSearch()" />
+  <button class="btn btn-search" onclick="runSearch()">Search</button>
+</div>
+
+<div class="container">
+  <div class="panel">
+    <div class="panel-header">
+      <span>Context Artifact Feed</span>
+      <span id="feed-count" style="color:#58a6ff">—</span>
+    </div>
+    <div class="panel-body" id="artifact-feed"><div class="empty">Run a scenario to see the artifact feed</div></div>
+    <div class="stats">
+      <div class="stat"><span class="stat-label">Allowed</span><span class="stat-value green" id="stat-allowed">0</span></div>
+      <div class="stat"><span class="stat-label">Blocked</span><span class="stat-value red" id="stat-blocked">0</span></div>
+      <div class="stat"><span class="stat-label">Total</span><span class="stat-value" id="stat-total">0</span></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header"><span>Claude's Response</span><span id="response-mode" style="color:#8b949e">—</span></div>
+    <div class="panel-body">
+      <div id="response-meta" class="response-meta" style="display:none"></div>
+      <div id="response-text"><div class="empty">Claude's response will appear here</div></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header"><span>Provenance Trail</span><span id="trail-session" style="color:#8b949e">—</span></div>
+    <div class="panel-body" id="provenance-trail"><div class="empty">Provenance events will appear here</div></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header"><span>Last Scenario</span></div>
+    <div class="panel-body" id="scenario-detail"><div class="empty">Scenario details will appear here</div></div>
+  </div>
+</div>
+
+<script>
+const AGENT_URL = 'http://localhost:8081';
+let totalAllowed = 0, totalBlocked = 0;
+
+async function fetchMode() {
+  try {
+    const r = await fetch(`${AGENT_URL}/demo/mode`);
+    const d = await r.json();
+    const banner = document.getElementById('mode-banner');
+    if (d.with_cre) {
+      banner.textContent = '🔒 PROTECTED — CRE Context Firewall Active';
+      banner.className = 'protected';
+    } else {
+      banner.textContent = '⚠️ UNPROTECTED — No context filtering (WITH_CRE=false)';
+      banner.className = 'unprotected';
+    }
+  } catch(e) { console.warn('Agent not reachable yet'); }
+}
+
+function renderArtifacts(filterResult, scenarioResult) {
+  const feed = document.getElementById('artifact-feed');
+  feed.innerHTML = '';
+
+  const allowed = filterResult?.documents || [];
+  const blocked = filterResult?.blocked_documents || [];
+
+  if (allowed.length === 0 && blocked.length === 0) {
+    feed.innerHTML = '<div class="empty">No artifacts to display</div>';
+    return;
+  }
+
+  [...blocked].forEach(doc => {
+    const el = document.createElement('div');
+    el.className = 'artifact blocked';
+    el.innerHTML = `
+      <div class="artifact-url">${doc.url}</div>
+      <span class="artifact-badge badge-blocked">BLOCKED</span>
+      <div class="artifact-tier">Trust tier: ${doc.source_trust_tier || 'untrusted'}</div>
+      <div class="artifact-rule">⚠ Blocked by: injection-detector (untrusted source)</div>
+    `;
+    feed.appendChild(el);
+  });
+
+  allowed.forEach(doc => {
+    const isUnfiltered = doc.source_trust_tier === 'unfiltered';
+    const el = document.createElement('div');
+    el.className = `artifact ${isUnfiltered ? 'unfiltered' : 'allowed'}`;
+    el.innerHTML = isUnfiltered
+      ? `<div class="artifact-url">${doc.url}</div>
+         <span class="artifact-badge badge-unfiltered">UNFILTERED</span>
+         <div class="artifact-tier">⚠ No CRE policy applied — document passed directly to Claude</div>`
+      : `<div class="artifact-url">${doc.url}</div>
+         <span class="artifact-badge badge-allowed">ALLOWED</span>
+         <div class="artifact-tier">Trust tier: ${doc.source_trust_tier || 'untrusted'}</div>`;
+    feed.appendChild(el);
+  });
+
+  totalAllowed += allowed.length;
+  totalBlocked += blocked.length;
+  document.getElementById('stat-allowed').textContent = totalAllowed;
+  document.getElementById('stat-blocked').textContent = totalBlocked;
+  document.getElementById('stat-total').textContent = totalAllowed + totalBlocked;
+  document.getElementById('feed-count').textContent = `${allowed.length + blocked.length} artifacts`;
+}
+
+function renderResponse(result) {
+  const modeEl = document.getElementById('response-mode');
+  const metaEl = document.getElementById('response-meta');
+  const textEl = document.getElementById('response-text');
+
+  const mode = result.mode || 'UNKNOWN';
+  modeEl.textContent = mode;
+  modeEl.style.color = mode === 'PROTECTED' ? '#3fb950' : '#f85149';
+
+  metaEl.style.display = 'block';
+  metaEl.innerHTML = `Mode: <strong style="color:${mode === 'PROTECTED' ? '#3fb950' : '#f85149'}">${mode}</strong> &nbsp;|&nbsp; Allowed: ${result.allowed_docs} &nbsp;|&nbsp; Blocked: ${result.blocked_docs}`;
+
+  textEl.innerHTML = `<pre id="response-text">${escapeHtml(result.response || '')}</pre>`;
+}
+
+function renderScenarioDetail(result) {
+  const el = document.getElementById('scenario-detail');
+  el.innerHTML = `
+    <div style="font-size:13px; font-weight:700; margin-bottom:8px; color:#e6edf3">${result.name}</div>
+    <div style="font-size:11px; color:#8b949e; margin-bottom:10px">${result.description}</div>
+    <div style="font-size:11px; color:#f0883e; margin-bottom:8px">Reference: ${result.reference}</div>
+    <div style="font-size:11px; margin-bottom:6px"><span style="color:#8b949e">Task: </span>${result.task}</div>
+    <div style="font-size:11px"><span style="color:#8b949e">Injected URL: </span><span style="color:#f85149">${result.injected_url}</span></div>
+  `;
+}
+
+async function pollProvenance(sessionId) {
+  try {
+    const r = await fetch(`${AGENT_URL}/demo/provenance`);
+    if (!r.ok) return;
+    const d = await r.json();
+    const trail = document.getElementById('provenance-trail');
+    const events = d.events || [];
+    if (events.length === 0) return;
+
+    document.getElementById('trail-session').textContent = d.session_id?.slice(0, 8) || '—';
+    trail.innerHTML = events.slice(0, 15).map(ev => `
+      <div class="trail-item">
+        <div class="trail-type">${ev.event_type || ev.type || 'event'}</div>
+        <div class="trail-detail">${JSON.stringify(ev).slice(0, 120)}...</div>
+      </div>
+    `).join('');
+  } catch(e) {}
+}
+
+async function runScenario(id) {
+  try {
+    const r = await fetch(`${AGENT_URL}/demo/run-scenario/${id}`, { method: 'POST' });
+    if (!r.ok) { alert(`Scenario ${id} failed: ${r.statusText}`); return; }
+    const result = await r.json();
+    renderArtifacts(result.filter_result, result);
+    renderResponse(result);
+    renderScenarioDetail(result);
+    setTimeout(() => pollProvenance(result.session_id), 1000);
+  } catch(e) { alert(`Error: ${e.message}. Is the agent running?`); }
+}
+
+async function runSearch() {
+  const query = document.getElementById('search-input').value.trim();
+  if (!query) return;
+  try {
+    const r = await fetch(`${AGENT_URL}/demo/search`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+    });
+    if (!r.ok) { alert(`Search failed: ${r.statusText}`); return; }
+    const result = await r.json();
+    renderArtifacts(result.filter_result, result);
+    renderResponse(result);
+  } catch(e) { alert(`Error: ${e.message}`); }
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+fetchMode();
+setInterval(fetchMode, 10000);
+</script>
+</body>
+</html>
