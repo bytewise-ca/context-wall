@@ -74,7 +74,7 @@ compliance_hmac_key: "${CRE_COMPLIANCE_HMAC_KEY}"
 # The daemon pushes only aggregated metadata (counts, scores) — never content.
 # ---------------------------------------------------------------------------
 # control_plane:
-#   url: https://app.contextwall.dev
+#   url: https://app.contextwall.io
 #   registration_token: cwt_your-token-from-settings
 #   daemon_name: prod-us-east-1
 

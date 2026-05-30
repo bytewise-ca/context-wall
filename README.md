@@ -56,10 +56,10 @@ docker run -p 8080:8080 \
 ```
 
 **Cloud dashboard** (optional: fleet visibility, policy authoring, compliance reports):
-> Sign up at [app.contextwall.dev](https://app.contextwall.dev), generate a registration token in Settings, then add it to `ctxfw.yaml`:
+> Sign up at [app.contextwall.io](https://app.contextwall.io), generate a registration token in Settings, then add it to `ctxfw.yaml`:
 > ```yaml
 > control_plane:
->   url: https://app.contextwall.dev
+>   url: https://app.contextwall.io
 >   registration_token: cwt_your-token-here
 >   daemon_name: prod-us-east-1
 > ```
@@ -379,7 +379,8 @@ ContextWall refuses to start with known-weak tokens and prints a generation comm
 | Python SDK | `sdk/python/` | `SafeAnthropic`, `SafeOpenAI`, `CREClient` |
 | Policy packs | `policy/packs/` | Pre-built HIPAA, SOC2, FedRAMP rule sets |
 | Live demo | `demo/` | Attack scenarios + dashboard (requires API keys) |
-| Web dashboard | `webapp/` | Next.js live enforcement viewer |
+
+The cloud control plane (fleet dashboard, policy authoring UI, compliance reports) is available at [app.contextwall.io](https://app.contextwall.io).
 
 ---
 
