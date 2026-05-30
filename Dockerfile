@@ -21,7 +21,7 @@ RUN pip install --no-cache-dir \
     "opentelemetry-sdk>=1.20" \
     "opentelemetry-exporter-otlp-proto-grpc>=1.20" \
     "grpcio>=1.60" \
-    "rapidfuzz>=3.0" "tdigest>=0.5" \
+    "rapidfuzz>=3.0" \
     "cryptography>=42.0" \
     "prometheus-client>=0.20" \
     "aiobotocore>=2.0"
