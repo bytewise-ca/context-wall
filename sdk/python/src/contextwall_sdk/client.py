@@ -5,7 +5,7 @@ and querying analytics/lint results.
 
 Example::
 
-    from cre_sdk import CREClient
+    from contextwall_sdk import CREClient
 
     cre = CREClient(api_key="...", base_url="http://localhost:8080")
 

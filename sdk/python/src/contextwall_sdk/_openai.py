@@ -7,7 +7,7 @@ Usage::
     client = openai.OpenAI(api_key="sk-...")
 
     # After (one line change)
-    from cre_sdk import SafeOpenAI
+    from contextwall_sdk import SafeOpenAI
     client = SafeOpenAI(cre_key="sk-cre-...", cre_url="http://localhost:8080")
 
     # Same API
@@ -21,7 +21,7 @@ Environment variables::
     CRE_KEY=sk-cre-...
     CRE_URL=http://localhost:8080
 
-    from cre_sdk import SafeOpenAI
+    from contextwall_sdk import SafeOpenAI
     client = SafeOpenAI()
 """
 
@@ -199,7 +199,7 @@ class SafeOpenAI:
             import openai
         except ImportError as e:
             raise ImportError(
-                "openai package is required: pip install 'cre-sdk[openai]'"
+                "openai package is required: pip install 'contextwall-sdk[openai]'"
             ) from e
 
         self._cre_url = (
@@ -240,7 +240,7 @@ class AsyncSafeOpenAI:
             import openai
         except ImportError as e:
             raise ImportError(
-                "openai package is required: pip install 'cre-sdk[openai]'"
+                "openai package is required: pip install 'contextwall-sdk[openai]'"
             ) from e
 
         self._cre_url = (

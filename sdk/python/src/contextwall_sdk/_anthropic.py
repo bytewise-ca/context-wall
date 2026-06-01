@@ -7,7 +7,7 @@ Usage::
     client = anthropic.Anthropic(api_key="sk-ant-...")
 
     # After (one line change, everything else identical)
-    from cre_sdk import SafeAnthropic
+    from contextwall_sdk import SafeAnthropic
     client = SafeAnthropic(cre_key="sk-cre-...", cre_url="http://localhost:8080")
 
     # Same API
@@ -22,7 +22,7 @@ Environment variables (no code changes needed)::
     CRE_KEY=sk-cre-...
     CRE_URL=http://localhost:8080
 
-    from cre_sdk import SafeAnthropic
+    from contextwall_sdk import SafeAnthropic
     client = SafeAnthropic()  # reads from env
 """
 
@@ -179,7 +179,7 @@ class SafeAnthropic:
             import anthropic
         except ImportError as e:
             raise ImportError(
-                "anthropic package is required: pip install 'cre-sdk[anthropic]'"
+                "anthropic package is required: pip install 'contextwall-sdk[anthropic]'"
             ) from e
 
         self._cre_url = (
@@ -236,7 +236,7 @@ class AsyncSafeAnthropic:
             import anthropic
         except ImportError as e:
             raise ImportError(
-                "anthropic package is required: pip install 'cre-sdk[anthropic]'"
+                "anthropic package is required: pip install 'contextwall-sdk[anthropic]'"
             ) from e
 
         self._cre_url = (

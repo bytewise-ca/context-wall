@@ -2,9 +2,9 @@
 
 Quick start::
 
-    pip install 'cre-sdk[anthropic]'
+    pip install 'contextwall-sdk[anthropic]'
 
-    from cre_sdk import SafeAnthropic, CREBlockedError
+    from contextwall_sdk import SafeAnthropic, CREBlockedError
 
     client = SafeAnthropic()   # reads CRE_KEY and CRE_URL from env
 
@@ -19,7 +19,7 @@ Quick start::
 
 Provisioning a key (admin)::
 
-    from cre_sdk import CREClient
+    from contextwall_sdk import CREClient
 
     cre = CREClient(api_key="...", base_url="http://localhost:8080")
     result = cre.keys.create(

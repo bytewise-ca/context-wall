@@ -50,7 +50,7 @@ def _raw_proxy_post(content: str) -> dict:
 
 @needs_api_key
 def test_client_health():
-    from cre_sdk import CREClient
+    from contextwall_sdk import CREClient
     cre = CREClient(api_key=CRE_API_KEY, base_url=CRE_URL)
     health = cre.health()
     assert health.status in ("healthy", "degraded")
@@ -58,7 +58,7 @@ def test_client_health():
 
 @needs_api_key
 def test_client_list_keys():
-    from cre_sdk import CREClient
+    from contextwall_sdk import CREClient
     cre = CREClient(api_key=CRE_API_KEY, base_url=CRE_URL)
     keys = cre.keys.list()
     assert isinstance(keys, list)
@@ -66,7 +66,7 @@ def test_client_list_keys():
 
 @needs_api_key
 def test_client_analytics():
-    from cre_sdk import CREClient
+    from contextwall_sdk import CREClient
     cre = CREClient(api_key=CRE_API_KEY, base_url=CRE_URL)
     summary = cre.analytics(window_hours=24)
     assert summary.window_hours == 24
@@ -75,7 +75,7 @@ def test_client_analytics():
 
 @needs_api_key
 def test_client_list_sources():
-    from cre_sdk import CREClient
+    from contextwall_sdk import CREClient
     cre = CREClient(api_key=CRE_API_KEY, base_url=CRE_URL)
     sources = cre.sources.list()
     assert isinstance(sources, list)
@@ -83,7 +83,7 @@ def test_client_list_sources():
 
 @needs_api_key
 def test_client_lint_latest():
-    from cre_sdk import CREClient
+    from contextwall_sdk import CREClient
     cre = CREClient(api_key=CRE_API_KEY, base_url=CRE_URL)
     report = cre.lint.latest()
     assert "findings" in report
@@ -138,7 +138,7 @@ def test_proxy_blocks_heuristic_injection():
 @needs_proxy_key
 def test_safe_anthropic_raises_cre_blocked_on_injection():
     pytest.importorskip("anthropic")
-    from cre_sdk import SafeAnthropic, CREBlockedError
+    from contextwall_sdk import SafeAnthropic, CREBlockedError
     client = SafeAnthropic(cre_key=CRE_PROXY_KEY, cre_url=CRE_URL)
     with pytest.raises(CREBlockedError) as exc_info:
         client.messages.create(
@@ -155,7 +155,7 @@ def test_safe_anthropic_raises_cre_blocked_on_injection():
 def test_safe_anthropic_clean_request_not_blocked():
     """A clean request should pass CRE and reach the upstream (may fail with auth error - that's fine)."""
     pytest.importorskip("anthropic")
-    from cre_sdk import SafeAnthropic, CREBlockedError
+    from contextwall_sdk import SafeAnthropic, CREBlockedError
     client = SafeAnthropic(cre_key=CRE_PROXY_KEY, cre_url=CRE_URL)
     with pytest.raises(Exception) as exc_info:
         client.messages.create(
@@ -173,7 +173,7 @@ def test_safe_anthropic_clean_request_not_blocked():
 @pytest.mark.asyncio
 async def test_async_safe_anthropic_raises_cre_blocked_on_injection():
     pytest.importorskip("anthropic")
-    from cre_sdk import AsyncSafeAnthropic, CREBlockedError
+    from contextwall_sdk import AsyncSafeAnthropic, CREBlockedError
     client = AsyncSafeAnthropic(cre_key=CRE_PROXY_KEY, cre_url=CRE_URL)
     with pytest.raises(CREBlockedError) as exc_info:
         await client.messages.create(
@@ -188,7 +188,7 @@ async def test_async_safe_anthropic_raises_cre_blocked_on_injection():
 @pytest.mark.asyncio
 async def test_async_safe_anthropic_clean_request_not_blocked():
     pytest.importorskip("anthropic")
-    from cre_sdk import AsyncSafeAnthropic, CREBlockedError
+    from contextwall_sdk import AsyncSafeAnthropic, CREBlockedError
     client = AsyncSafeAnthropic(cre_key=CRE_PROXY_KEY, cre_url=CRE_URL)
     with pytest.raises(Exception) as exc_info:
         await client.messages.create(
@@ -204,7 +204,7 @@ async def test_async_safe_anthropic_clean_request_not_blocked():
 @needs_api_key
 @pytest.mark.asyncio
 async def test_async_client_health():
-    from cre_sdk import AsyncCREClient
+    from contextwall_sdk import AsyncCREClient
     async with AsyncCREClient(api_key=CRE_API_KEY, base_url=CRE_URL) as cre:
         health = await cre.health()
     assert health.status in ("healthy", "degraded")
@@ -213,7 +213,7 @@ async def test_async_client_health():
 @needs_api_key
 @pytest.mark.asyncio
 async def test_async_client_list_sources():
-    from cre_sdk import AsyncCREClient
+    from contextwall_sdk import AsyncCREClient
     async with AsyncCREClient(api_key=CRE_API_KEY, base_url=CRE_URL) as cre:
         sources = await cre.sources.list()
     assert isinstance(sources, list)
@@ -222,7 +222,7 @@ async def test_async_client_list_sources():
 @needs_api_key
 @pytest.mark.asyncio
 async def test_async_client_lint_latest():
-    from cre_sdk import AsyncCREClient
+    from contextwall_sdk import AsyncCREClient
     async with AsyncCREClient(api_key=CRE_API_KEY, base_url=CRE_URL) as cre:
         report = await cre.lint.latest()
     assert "findings" in report
@@ -232,7 +232,7 @@ async def test_async_client_lint_latest():
 
 @needs_api_key
 def test_key_create_and_revoke():
-    from cre_sdk import CREClient
+    from contextwall_sdk import CREClient
     cre = CREClient(api_key=CRE_API_KEY, base_url=CRE_URL)
 
     result = cre.keys.create(
@@ -257,7 +257,7 @@ def test_key_create_and_revoke():
 
 @needs_api_key
 def test_source_register_and_delete():
-    from cre_sdk import CREClient
+    from contextwall_sdk import CREClient
     cre = CREClient(api_key=CRE_API_KEY, base_url=CRE_URL)
 
     source = cre.sources.register(
