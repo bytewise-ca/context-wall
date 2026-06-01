@@ -31,16 +31,16 @@ from __future__ import annotations
 import os
 from typing import Any, Iterator, AsyncIterator
 
-from .exceptions import CREBlockedError, CREUnavailableError, CREAuthError
+from .exceptions import ContextWallBlockedError, ContextWallUnavailableError, ContextWallAuthError
 
 
 def _check_cre_block(body: Any) -> None:
-    """Raise CREBlockedError if the response body is a CRE policy violation."""
+    """Raise ContextWallBlockedError if the response body is a CRE policy violation."""
     if not isinstance(body, dict):
         return
     err = body.get("error", {})
     if isinstance(err, dict) and err.get("type") == "cre_policy_violation":
-        raise CREBlockedError(
+        raise ContextWallBlockedError(
             blocked_reason=err.get("message", "policy violation"),
             violations=err.get("violations", []),
             raw_body=body,
@@ -52,14 +52,14 @@ def _wrap_exception(exc: Exception, cre_url: str) -> None:
     try:
         import httpx
         if isinstance(exc, httpx.ConnectError):
-            raise CREUnavailableError(cre_url, cause=exc) from exc
+            raise ContextWallUnavailableError(cre_url, cause=exc) from exc
     except ImportError:
         pass
 
     # Anthropic SDK exception inspection
     exc_type = type(exc).__name__
     if exc_type in ("AuthenticationError",):
-        raise CREAuthError() from exc
+        raise ContextWallAuthError() from exc
 
     if exc_type in ("BadRequestError", "APIStatusError"):
         body = getattr(exc, "body", None)
@@ -158,13 +158,13 @@ class SafeAnthropic:
         cre_url:               CRE daemon URL. Falls back to ``CRE_URL`` env var,
                                then ``http://localhost:8080``.
         fallback_on_unavailable: If True and CRE is unreachable, raises
-                               ``CREUnavailableError`` (default False = fail fast).
+                               ``ContextWallUnavailableError`` (default False = fail fast).
         **kwargs:              Passed through to ``anthropic.Anthropic()``.
 
     Raises:
-        CREBlockedError:       When CRE blocks the request (policy violation).
-        CREUnavailableError:   When CRE cannot be reached (and fallback is off).
-        CREAuthError:          When the CRE key is rejected.
+        ContextWallBlockedError:       When ContextWall blocks the request (policy violation).
+        ContextWallUnavailableError:   When ContextWall cannot be reached (and fallback is off).
+        ContextWallAuthError:          When the ContextWall key is rejected.
         ImportError:           If ``anthropic`` package is not installed.
     """
 

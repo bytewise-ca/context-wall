@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 
-class CREError(Exception):
+class ContextWallError(Exception):
     """Base class for all ContextWall SDK errors."""
 
 
-class CREBlockedError(CREError):
+class ContextWallBlockedError(ContextWallError):
     """Raised when ContextWall blocks a request due to a policy violation.
 
     This replaces the generic ``BadRequestError`` the underlying SDK would raise,
@@ -17,7 +17,7 @@ class CREBlockedError(CREError):
 
         try:
             client.messages.create(...)
-        except CREBlockedError as e:
+        except ContextWallBlockedError as e:
             print(e.violations)      # ["prompt_injection"]
             print(e.blocked_reason)  # "prompt_injection detected in message content"
     """
@@ -34,7 +34,7 @@ class CREBlockedError(CREError):
         super().__init__(f"ContextWall blocked request: {blocked_reason}")
 
 
-class CREUnavailableError(CREError):
+class ContextWallUnavailableError(ContextWallError):
     """Raised when the ContextWall daemon cannot be reached and fallback is disabled."""
 
     def __init__(self, url: str, cause: Exception | None = None) -> None:
@@ -46,7 +46,7 @@ class CREUnavailableError(CREError):
         )
 
 
-class CREAuthError(CREError):
+class ContextWallAuthError(ContextWallError):
     """Raised when the ContextWall key is invalid or revoked."""
 
     def __init__(self, message: str = "Invalid or revoked ContextWall key") -> None:

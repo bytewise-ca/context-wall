@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "contextwall-sdk"
-version = "0.1.1"
-description = "ContextWall SDK - drop-in wrapper for Anthropic and OpenAI with context firewall enforcement"
+version = "0.1.3"
+description = "ContextWall SDK - drop-in context firewall enforcement for any LLM"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }

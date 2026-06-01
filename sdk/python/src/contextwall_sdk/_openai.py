@@ -30,7 +30,7 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from .exceptions import CREBlockedError, CREUnavailableError, CREAuthError
+from .exceptions import ContextWallBlockedError, ContextWallUnavailableError, ContextWallAuthError
 
 
 def _check_cre_block(body: Any) -> None:
@@ -38,7 +38,7 @@ def _check_cre_block(body: Any) -> None:
         return
     err = body.get("error", {})
     if isinstance(err, dict) and err.get("type") == "cre_policy_violation":
-        raise CREBlockedError(
+        raise ContextWallBlockedError(
             blocked_reason=err.get("message", "policy violation"),
             violations=err.get("violations", []),
             raw_body=body,
@@ -49,13 +49,13 @@ def _wrap_exception(exc: Exception, cre_url: str) -> None:
     try:
         import httpx
         if isinstance(exc, httpx.ConnectError):
-            raise CREUnavailableError(cre_url, cause=exc) from exc
+            raise ContextWallUnavailableError(cre_url, cause=exc) from exc
     except ImportError:
         pass
 
     exc_type = type(exc).__name__
     if exc_type == "AuthenticationError":
-        raise CREAuthError() from exc
+        raise ContextWallAuthError() from exc
 
     if exc_type in ("BadRequestError", "APIStatusError", "APIError"):
         # OpenAI SDK stores the body differently
@@ -183,9 +183,9 @@ class SafeOpenAI:
         **kwargs:              Passed through to ``openai.OpenAI()``.
 
     Raises:
-        CREBlockedError:       When CRE blocks the request.
-        CREUnavailableError:   When CRE cannot be reached.
-        CREAuthError:          When the CRE key is rejected.
+        ContextWallBlockedError:       When ContextWall blocks the request.
+        ContextWallUnavailableError:   When ContextWall cannot be reached.
+        ContextWallAuthError:          When the ContextWall key is rejected.
         ImportError:           If ``openai`` package is not installed.
     """
 

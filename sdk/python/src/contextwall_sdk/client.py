@@ -5,9 +5,9 @@ and querying analytics/lint results.
 
 Example::
 
-    from contextwall_sdk import CREClient
+    from contextwall_sdk import ContextWallClient
 
-    cre = CREClient(api_key="...", base_url="http://localhost:8080")
+    cre = ContextWallClient(api_key="...", base_url="http://localhost:8080")
 
     # Provision a key for an agent
     result = cre.keys.create(
@@ -336,7 +336,7 @@ class _AsyncLintClient:
 
 # ── Main clients ───────────────────────────────────────────────────────────────
 
-class CREClient:
+class ContextWallClient:
     """Synchronous admin client for the ContextWall daemon.
 
     Args:
@@ -405,15 +405,15 @@ class CREClient:
     def close(self) -> None:
         self._http.close()
 
-    def __enter__(self) -> "CREClient":
+    def __enter__(self) -> "ContextWallClient":
         return self
 
     def __exit__(self, *args: Any) -> None:
         self.close()
 
 
-class AsyncCREClient:
-    """Async admin client for the ContextWall daemon. Same API as CREClient but awaitable."""
+class AsyncContextWallClient:
+    """Async admin client for the ContextWall daemon. Same API as ContextWallClient but awaitable."""
 
     def __init__(
         self,
@@ -468,7 +468,7 @@ class AsyncCREClient:
     async def close(self) -> None:
         await self._http.aclose()
 
-    async def __aenter__(self) -> "AsyncCREClient":
+    async def __aenter__(self) -> "AsyncContextWallClient":
         return self
 
     async def __aexit__(self, *args: Any) -> None:
