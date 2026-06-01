@@ -9,8 +9,8 @@ sources: []
 
 # ── Detection ─────────────────────────────────────────────────────────────────
 detection:
-  injection_block_threshold: 0.55
-  injection_warn_threshold: 0.35
+  injection_block_threshold: 0.75
+  injection_warn_threshold: 0.55
   default_source_trust_tier: untrusted
 
 # ── Enforcement ───────────────────────────────────────────────────────────────

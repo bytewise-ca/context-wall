@@ -14,8 +14,8 @@ sources:
 
 # ── Detection ─────────────────────────────────────────────────────────────────
 detection:
-  injection_block_threshold: 0.55   # heuristic confidence >= this → block
-  injection_warn_threshold: 0.35    # heuristic confidence >= this → audit log
+  injection_block_threshold: 0.75   # heuristic confidence >= this → block
+  injection_warn_threshold: 0.55    # heuristic confidence >= this → audit log
   default_source_trust_tier: untrusted
 
 # ── Enforcement ───────────────────────────────────────────────────────────────

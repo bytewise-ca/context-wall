@@ -30,8 +30,8 @@ sources:
 # Detection thresholds — tune per environment.
 # ---------------------------------------------------------------------------
 detection:
-  injection_block_threshold: 0.55  # raise to reduce false positives
-  injection_warn_threshold: 0.35   # lower to catch more, audit instead of block
+  injection_block_threshold: 0.75  # raise to reduce false positives
+  injection_warn_threshold: 0.55   # lower to catch more, audit instead of block
   default_source_trust_tier: untrusted
 
 enforcement:

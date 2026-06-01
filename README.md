@@ -386,8 +386,6 @@ The cloud control plane (fleet dashboard, policy authoring UI, compliance report
 
 ## License
 
-**AGPL v3:** core proxy, policy engine, provenance chain, Python SDK.
+**Apache 2.0:** the daemon, policy engine, provenance chain, and SDK are free to use, modify, and distribute - including in commercial and proprietary products.
 
-If you run ContextWall as a service (managed or embedded), AGPL requires you to release your modifications under the same terms. If your organisation cannot comply with AGPL (for example, you want to embed ContextWall in a proprietary product or offer it as a closed SaaS), a commercial license is available at [contextwall.io](https://contextwall.io).
-
-Fleet policy management, multi-tenant control plane, and the cloud dashboard are available on the paid cloud plan only.
+The cloud dashboard (fleet visibility, policy authoring UI, compliance exports) is proprietary and available at [app.contextwall.io](https://app.contextwall.io).
