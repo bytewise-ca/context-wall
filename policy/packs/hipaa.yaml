@@ -19,7 +19,7 @@ rules:
     compliance_mapping:
       framework: hipaa
       control_id: "45 CFR 164.502(b)"
-      description: "Minimum Necessary Standard — limit PHI use to minimum required"
+      description: "Minimum Necessary Standard - limit PHI use to minimum required"
 
   - name: hipaa-audit-control
     action: audit-only
@@ -33,7 +33,7 @@ rules:
     compliance_mapping:
       framework: hipaa
       control_id: "45 CFR 164.312(b)"
-      description: "Audit Controls — implement mechanisms to record and examine activity"
+      description: "Audit Controls - implement mechanisms to record and examine activity"
 
   - name: hipaa-phi-content-block
     action: redact
@@ -52,4 +52,4 @@ rules:
     compliance_mapping:
       framework: hipaa
       control_id: "45 CFR 164.514(d)"
-      description: "Minimum Necessary — workforce access limited to minimum PHI"
+      description: "Minimum Necessary - workforce access limited to minimum PHI"

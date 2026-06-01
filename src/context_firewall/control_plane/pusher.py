@@ -4,7 +4,7 @@ Runs two background loops:
   - Telemetry push:  every push_interval_seconds (default 60s)
   - Heartbeat push:  every heartbeat_interval_seconds (default 30s)
 
-Reads Prometheus counter deltas from the in-process registry — no content,
+Reads Prometheus counter deltas from the in-process registry - no content,
 no file paths, no prompt text ever leaves the daemon.
 
 The pusher is entirely non-critical: if the control plane is unreachable the
@@ -172,7 +172,7 @@ class ControlPlanePusher:
 
     async def start(self) -> None:
         if not self._cp.url or not self._cp.registration_token:
-            logger.info("Control plane not configured — running in local-only mode")
+            logger.info("Control plane not configured - running in local-only mode")
             return
 
         # Register (retry up to 3 times with backoff)
@@ -186,7 +186,7 @@ class ControlPlanePusher:
             await asyncio.sleep(5 * (attempt + 1))
 
         if not self._registered:
-            logger.warning("Could not reach control plane after 3 attempts — will retry in background")
+            logger.warning("Could not reach control plane after 3 attempts - will retry in background")
 
         self._tasks = [
             asyncio.ensure_future(self._telemetry_loop()),
@@ -211,7 +211,7 @@ class ControlPlanePusher:
         )
 
     async def _telemetry_loop(self) -> None:
-        # Seed baseline on first tick — don't push a spike of "all counters since boot"
+        # Seed baseline on first tick - don't push a spike of "all counters since boot"
         self._last_samples = _collect_counter_samples()
         await asyncio.sleep(self._cp.push_interval_seconds)
 
@@ -240,7 +240,7 @@ class ControlPlanePusher:
                     new_version = await self._push_heartbeat()
                     if new_version and new_version != self._local_policy_version:
                         logger.info(
-                            "Policy version changed: %s → %s — pulling new rules",
+                            "Policy version changed: %s → %s - pulling new rules",
                             self._local_policy_version, new_version,
                         )
                         await self._pull_policies()
@@ -283,7 +283,7 @@ class ControlPlanePusher:
         delta = _compute_delta(current, self._last_samples)
         self._last_samples = current
 
-        # Proxy request counts — split by result (allowed/blocked)
+        # Proxy request counts - split by result (allowed/blocked)
         proxy_by_result = _delta_label(delta.get(_PROXY_REQUESTS, {}), "result")
         proxy_total   = int(sum(proxy_by_result.values()))
         proxy_blocked = int(proxy_by_result.get("blocked", 0))
@@ -295,7 +295,7 @@ class ControlPlanePusher:
         # Violation types from proxy scanner
         violation_by_type = _delta_label(delta.get(_PROXY_VIOLATIONS, {}), "violation_type")
 
-        # Policy enforcement breakdown — keyed by (action, rule_name)
+        # Policy enforcement breakdown - keyed by (action, rule_name)
         policy_delta = delta.get(_POLICY_ENFORCEMENTS, {})
         policy_by_rule: dict[tuple[str, str], int] = {}
         for key_tuple, count in policy_delta.items():
@@ -329,7 +329,7 @@ class ControlPlanePusher:
         # Average proxy latency (from histogram)
         avg_latency_ms = _collect_histogram_mean(_PROXY_DURATION)
 
-        # Active sessions (gauge — current value)
+        # Active sessions (gauge - current value)
         active_sessions = int(_collect_gauge(_ACTIVE_SESSIONS))
 
         batch = TelemetryBatch(

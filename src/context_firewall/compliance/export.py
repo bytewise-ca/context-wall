@@ -73,7 +73,7 @@ class ComplianceExportBundle:
     signature: str = ""
 
     def canonical_json(self) -> bytes:
-        """Deterministic JSON for signing — excludes signature field."""
+        """Deterministic JSON for signing - excludes signature field."""
         doc = {
             "bundle_id": self.bundle_id,
             "export_scope": self.export_scope,

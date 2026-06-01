@@ -1,4 +1,4 @@
-"""Shared domain models for CRE pipeline."""
+"""Shared domain models for ContextWall pipeline."""
 
 from __future__ import annotations
 

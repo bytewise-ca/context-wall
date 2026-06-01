@@ -1,6 +1,6 @@
-# CRE — Open Source Edition
+# ContextWall - Open Source Edition
 #
-# Services: CRE daemon · Demo agent · Attack scenario dashboard
+# Services: ContextWall daemon · Demo agent · Attack scenario dashboard
 #
 # Quick start:
 #   cp .env.oss.example .env.oss
@@ -8,12 +8,12 @@
 #   docker compose -f docker-compose.oss.yml up --build
 #
 # Dashboard: http://localhost:3000
-# CRE API:   http://localhost:8080
+# ContextWall API:   http://localhost:8080
 # Demo agent: http://localhost:8081
 
 services:
 
-  # ── CRE Daemon ──────────────────────────────────────────────────────────────
+  # ── ContextWall Daemon ──────────────────────────────────────────────────────────────
   cre:
     build:
       context: .

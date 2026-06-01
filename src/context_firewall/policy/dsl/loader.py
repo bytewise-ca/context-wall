@@ -1,4 +1,4 @@
-"""Policy DSL — four-layer stack loader.
+"""Policy DSL - four-layer stack loader.
 
 Layers: fleet → org → team → repo  (deny-wins: fleet deny cannot be overridden).
 Stack is computed at daemon startup; invalidated and recomputed within 5s on any

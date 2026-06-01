@@ -1,4 +1,4 @@
-"""Lint engine — audits provenance and policy data for anomalies.
+"""Lint engine - audits provenance and policy data for anomalies.
 
 Inspired by the Karpathy LLM Wiki pattern: use existing logged data to
 surface contradictions, drift, and orphans that operators would miss by
@@ -140,7 +140,7 @@ class LintEngine:
     async def _check_tier_drift(
         self, db: aiosqlite.Connection, report: LintReport, window_days: int
     ) -> None:
-        """Sources whose proxy block rate exceeds 30% — may warrant a trust tier downgrade."""
+        """Sources whose proxy block rate exceeds 30% - may warrant a trust tier downgrade."""
         try:
             async with db.execute("""
                 SELECT
@@ -193,7 +193,7 @@ class LintEngine:
     async def _check_stale_rules(
         self, db: aiosqlite.Connection, report: LintReport, window_days: int
     ) -> None:
-        """Policy rules that fired >60 days ago — may be dead code."""
+        """Policy rules that fired >60 days ago - may be dead code."""
         try:
             async with db.execute("""
                 SELECT
@@ -226,7 +226,7 @@ class LintEngine:
     async def _check_contradictions(
         self, db: aiosqlite.Connection, report: LintReport, window_days: int
     ) -> None:
-        """Pattern names that triggered both blocking and audit-only actions — conflicting policy."""
+        """Pattern names that triggered both blocking and audit-only actions - conflicting policy."""
         try:
             async with db.execute("""
                 SELECT
@@ -257,7 +257,7 @@ class LintEngine:
                     severity="warn",
                     subject=row["pattern_name"],
                     detail=f"same pattern triggered {blocking} and {permissive} within {window_days} days ({row['total']} events)",
-                    suggestion="Check policy layering — a lower-priority rule may be overriding a fleet deny with audit-only.",
+                    suggestion="Check policy layering - a lower-priority rule may be overriding a fleet deny with audit-only.",
                 ))
         except Exception as e:
             logger.debug("contradiction check skipped: %s", e)

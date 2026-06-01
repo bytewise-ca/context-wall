@@ -9,7 +9,7 @@ rules:
     compliance_mapping:
       framework: fedramp
       control_id: AU-2
-      description: "Audit Events — identify events that require auditing"
+      description: "Audit Events - identify events that require auditing"
 
   - name: fedramp-au9-audit-protection
     action: audit-only
@@ -23,11 +23,11 @@ rules:
     compliance_mapping:
       framework: fedramp
       control_id: AU-9
-      description: "Protection of Audit Information — protect audit records from modification"
+      description: "Protection of Audit Information - protect audit records from modification"
 
   - name: fedramp-ac3-access-enforcement
     action: deny
-    reason: "FedRAMP AC-3: access enforcement — secret or sensitive content blocked"
+    reason: "FedRAMP AC-3: access enforcement - secret or sensitive content blocked"
     condition:
       or:
         - field: content
@@ -42,11 +42,11 @@ rules:
     compliance_mapping:
       framework: fedramp
       control_id: AC-3
-      description: "Access Enforcement — enforce access control policies"
+      description: "Access Enforcement - enforce access control policies"
 
   - name: fedramp-si3-malicious-code
     action: deny
-    reason: "FedRAMP SI-3: malicious code protection — injection pattern blocked from untrusted source"
+    reason: "FedRAMP SI-3: malicious code protection - injection pattern blocked from untrusted source"
     applies_when:
       source_tier: untrusted
     condition:
@@ -60,4 +60,4 @@ rules:
     compliance_mapping:
       framework: fedramp
       control_id: SI-3
-      description: "Malicious Code Protection — implement malicious code protection mechanisms"
+      description: "Malicious Code Protection - implement malicious code protection mechanisms"

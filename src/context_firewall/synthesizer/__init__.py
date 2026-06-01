@@ -1,4 +1,4 @@
-"""Context Synthesizer — assembles TrustedContextBundle from ranked candidates."""
+"""Context Synthesizer - assembles TrustedContextBundle from ranked candidates."""
 
 from context_firewall.synthesizer.synthesizer import ContextSynthesizer
 

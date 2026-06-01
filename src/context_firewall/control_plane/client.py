@@ -1,7 +1,7 @@
 """HTTP client for control plane communication.
 
 All outbound calls go here. If the control plane is unreachable the daemon
-continues operating normally — the control plane is advisory, not on the
+continues operating normally - the control plane is advisory, not on the
 critical path.
 """
 
@@ -36,7 +36,7 @@ class ControlPlaneClient:
 
     def _daemon_headers(self) -> dict[str, str]:
         if not self._daemon_token:
-            raise RuntimeError("Not registered — call register() first")
+            raise RuntimeError("Not registered - call register() first")
         return {"Authorization": f"Bearer {self._daemon_token}"}
 
     async def register(self, payload: RegisterPayload) -> RegisterResponse | None:

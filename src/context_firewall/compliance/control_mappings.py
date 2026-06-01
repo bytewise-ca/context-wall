@@ -20,7 +20,7 @@ RULE_CONTROL_MAP: dict[str, list[ControlRef]] = {
     # HIPAA minimum-necessary rule
     "hipaa-minimum-necessary": [
         ControlRef("hipaa", "45 CFR 164.502(b)", "Minimum Necessary Standard"),
-        ControlRef("hipaa", "45 CFR 164.514(d)", "Minimum Necessary — workforce access"),
+        ControlRef("hipaa", "45 CFR 164.514(d)", "Minimum Necessary - workforce access"),
     ],
     # HIPAA audit control
     "hipaa-audit-control": [
@@ -29,7 +29,7 @@ RULE_CONTROL_MAP: dict[str, list[ControlRef]] = {
     # Untrusted source sanitization
     "untrusted-source-sanitization": [
         ControlRef("soc2", "CC6.1", "Logical and Physical Access Controls"),
-        ControlRef("soc2", "CC6.6", "External Threats — logical access controls"),
+        ControlRef("soc2", "CC6.6", "External Threats - logical access controls"),
         ControlRef("fedramp", "SI-3", "Malicious Code Protection"),
     ],
     # Secret detection

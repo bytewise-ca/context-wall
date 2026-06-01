@@ -1,4 +1,4 @@
-"""SafeOpenAI — drop-in OpenAI client with CRE enforcement.
+"""SafeOpenAI - drop-in OpenAI client with CRE enforcement.
 
 Usage::
 

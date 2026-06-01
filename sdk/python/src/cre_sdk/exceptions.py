@@ -1,14 +1,14 @@
-"""CRE SDK exceptions."""
+"""ContextWall SDK exceptions."""
 
 from __future__ import annotations
 
 
 class CREError(Exception):
-    """Base class for all CRE SDK errors."""
+    """Base class for all ContextWall SDK errors."""
 
 
 class CREBlockedError(CREError):
-    """Raised when CRE blocks a request due to a policy violation.
+    """Raised when ContextWall blocks a request due to a policy violation.
 
     This replaces the generic ``BadRequestError`` the underlying SDK would raise,
     giving you structured access to what was detected and why.
@@ -31,23 +31,23 @@ class CREBlockedError(CREError):
         self.blocked_reason = blocked_reason
         self.violations = violations
         self.raw_body = raw_body or {}
-        super().__init__(f"CRE blocked request: {blocked_reason}")
+        super().__init__(f"ContextWall blocked request: {blocked_reason}")
 
 
 class CREUnavailableError(CREError):
-    """Raised when the CRE daemon cannot be reached and fallback is disabled."""
+    """Raised when the ContextWall daemon cannot be reached and fallback is disabled."""
 
     def __init__(self, url: str, cause: Exception | None = None) -> None:
         self.url = url
         self.cause = cause
         super().__init__(
-            f"CRE daemon unreachable at {url}. "
+            f"ContextWall daemon unreachable at {url}. "
             "Set fallback_on_unavailable=True to fall through to the real API."
         )
 
 
 class CREAuthError(CREError):
-    """Raised when the CRE key is invalid or revoked."""
+    """Raised when the ContextWall key is invalid or revoked."""
 
-    def __init__(self, message: str = "Invalid or revoked CRE key") -> None:
+    def __init__(self, message: str = "Invalid or revoked ContextWall key") -> None:
         super().__init__(message)

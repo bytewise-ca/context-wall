@@ -1,16 +1,16 @@
 """Transparent LLM proxy router.
 
 Endpoints:
-  POST /proxy/anthropic/v1/messages          — Anthropic Messages API
-  POST /proxy/openai/v1/chat/completions     — OpenAI Chat Completions API
-  POST /v1/keys                              — provision a new CRE proxy key
-  GET  /v1/keys                              — list proxy keys (masked)
-  DELETE /v1/keys/{key_prefix}              — revoke a proxy key
+  POST /proxy/anthropic/v1/messages          - Anthropic Messages API
+  POST /proxy/openai/v1/chat/completions     - OpenAI Chat Completions API
+  POST /v1/keys                              - provision a new ContextWall proxy key
+  GET  /v1/keys                              - list proxy keys (masked)
+  DELETE /v1/keys/{key_prefix}              - revoke a proxy key
 
 Usage (developer side):
   export ANTHROPIC_BASE_URL=http://localhost:8080/proxy/anthropic
   export ANTHROPIC_API_KEY=sk-cre-<your-cre-key>
-  # That's it — every anthropic SDK call now flows through CRE.
+  # That's it - every anthropic SDK call now flows through ContextWall.
 """
 
 from __future__ import annotations
@@ -121,12 +121,12 @@ def _apply_heuristic_scan(
     """Run the multi-layer injection detector on top of the base regex scan.
 
     Only fires for non-internal tiers and only when the base scan allowed
-    the request — if regex already blocked, skip to avoid redundant work.
+    the request - if regex already blocked, skip to avoid redundant work.
 
     The policy detector adds three layers the regex scanner misses:
-      Layer 1 — structural: bidi chars, zero-width, spaced-letter obfuscation
-      Layer 2 — normalized regex: patterns applied to de-obfuscated text
-      Layer 3 — heuristic: semantic paraphrase scoring without LLM inference
+      Layer 1 - structural: bidi chars, zero-width, spaced-letter obfuscation
+      Layer 2 - normalized regex: patterns applied to de-obfuscated text
+      Layer 3 - heuristic: semantic paraphrase scoring without LLM inference
 
     New violations are merged into the result. Any heuristic blocking violation
     flips allowed=False.
@@ -202,16 +202,16 @@ def create_proxy_router(token_store: TokenStore, engines: dict[str, Any]) -> API
         body: dict,
         authorization: str = Header(alias="Authorization", default=""),
     ):
-        """Provision a new CRE proxy key for a project.
+        """Provision a new ContextWall proxy key for a project.
 
         Body:
           project_id    (str, required)
           project_name  (str, optional)
-          upstream_key  (str, required) — real Anthropic/OpenAI key
-          provider      (str, optional) — "anthropic" | "openai" | "any"
+          upstream_key  (str, required) - real Anthropic/OpenAI key
+          provider      (str, optional) - "anthropic" | "openai" | "any"
           scopes        (list[str], optional)
 
-        Returns the raw key ONCE. Store it — it cannot be retrieved again.
+        Returns the raw key ONCE. Store it - it cannot be retrieved again.
         """
         project_id = (body.get("project_id") or "").strip()
         upstream_key = (body.get("upstream_key") or "").strip()
@@ -234,7 +234,7 @@ def create_proxy_router(token_store: TokenStore, engines: dict[str, Any]) -> API
             "project_name": token.project_name,
             "provider": token.provider,
             "created_at": token.created_at.isoformat(),
-            "warning": "Store this key now — it will not be shown again.",
+            "warning": "Store this key now - it will not be shown again.",
         }
 
     @router.get("/v1/keys")
@@ -263,7 +263,7 @@ def create_proxy_router(token_store: TokenStore, engines: dict[str, Any]) -> API
         if not token:
             raise HTTPException(
                 status_code=401,
-                detail={"error": "invalid or revoked CRE key", "code": "UNAUTHORIZED"},
+                detail={"error": "invalid or revoked ContextWall key", "code": "UNAUTHORIZED"},
             )
         return token
 
@@ -284,7 +284,7 @@ def create_proxy_router(token_store: TokenStore, engines: dict[str, Any]) -> API
         if not token:
             raise HTTPException(
                 status_code=401,
-                detail={"error": "invalid or revoked CRE key", "code": "UNAUTHORIZED"},
+                detail={"error": "invalid or revoked ContextWall key", "code": "UNAUTHORIZED"},
             )
         return token
 
@@ -295,14 +295,14 @@ def create_proxy_router(token_store: TokenStore, engines: dict[str, Any]) -> API
                 "type": "error",
                 "error": {
                     "type": "cre_policy_violation",
-                    "message": f"CRE blocked: {scan.blocked_reason}",
+                    "message": f"ContextWall blocked: {scan.blocked_reason}",
                     "violations": scan.violation_names,
                 },
             }
         # openai shape
         return {
             "error": {
-                "message": f"CRE blocked: {scan.blocked_reason}",
+                "message": f"ContextWall blocked: {scan.blocked_reason}",
                 "type": "cre_policy_violation",
                 "code": "content_policy_violation",
                 "violations": scan.violation_names,

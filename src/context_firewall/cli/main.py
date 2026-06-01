@@ -1,4 +1,4 @@
-"""ctxfw CLI — analyze, daemon, replay, refresh, init."""
+"""ctxfw CLI - analyze, daemon, replay, refresh, init."""
 
 from __future__ import annotations
 
@@ -40,7 +40,7 @@ def _print(data, output_format: str):
 @click.option("--output", type=click.Choice(["human", "json"]), default="human", help="Output format")
 @click.pass_context
 def cli(ctx, config, api_url, token, output):
-    """CRE — Context Reliability Engine CLI."""
+    """ContextWall CLI."""
     ctx.ensure_object(dict)
     ctx.obj["config"] = config
     ctx.obj["api_url"] = api_url.rstrip("/")
@@ -101,7 +101,7 @@ def analyze(ctx, task, session_id, repository_root, trust_cutoff):
 @click.option("--port", default=None, type=int, help="Port override")
 @click.option("--config", "config_path", default="ctxfw.yaml", envvar="CTXFW_CONFIG")
 def daemon(host, port, config_path):
-    """Start the CRE daemon (API + MCP + background jobs)."""
+    """Start the ContextWall daemon (API + MCP + background jobs)."""
     import asyncio
     from context_firewall.daemon.main import run_daemon
     from context_firewall.config import load_config
@@ -298,7 +298,7 @@ def sources_remove(ctx, source_id, confirm):
 
 @cli.group("policy")
 def policy_group():
-    """Policy management — validate and inspect policy files."""
+    """Policy management - validate and inspect policy files."""
 
 
 @policy_group.command("validate")
@@ -337,7 +337,7 @@ def policy_validate(path):
 
 @cli.group("compliance")
 def compliance_group():
-    """Compliance export — generate and verify signed audit bundles."""
+    """Compliance export - generate and verify signed audit bundles."""
 
 
 @compliance_group.command("export")
@@ -408,10 +408,10 @@ def compliance_verify(ctx, bundle_file):
         sys.exit(1)
 
     if data.get("valid"):
-        click.echo(f"VALID — {data.get('message', 'chain intact, signature verified')}")
+        click.echo(f"VALID - {data.get('message', 'chain intact, signature verified')}")
         sys.exit(0)
     else:
-        click.echo(f"INVALID — {data.get('message', 'verification failed')}", err=True)
+        click.echo(f"INVALID - {data.get('message', 'verification failed')}", err=True)
         sys.exit(1)
 
 
@@ -445,7 +445,7 @@ def keys_export_public(key_dir):
 @cli.command("init")
 @click.option("--force", is_flag=True, help="Overwrite existing config")
 def init_cmd(force):
-    """Initialize CRE in the current directory."""
+    """Initialize ContextWall in the current directory."""
     config_path = Path("ctxfw.yaml")
     policy_dir = Path(".ctxfw/policies")
     policy_dir.mkdir(parents=True, exist_ok=True)
@@ -457,7 +457,7 @@ def init_cmd(force):
         sys.exit(1)
 
     config_path.write_text(
-        "# CRE configuration\n"
+        "# ContextWall configuration\n"
         "repository_root: .\n\n"
         "rest_api:\n"
         "  port: 8080\n"
@@ -478,12 +478,12 @@ def init_cmd(force):
         "#   - hipaa\n"
         "#   - soc2\n"
         "#   - fedramp\n\n"
-        "# Policy DSL — four-layer hierarchy (Phase 3)\n"
+        "# Policy DSL - four-layer hierarchy (Phase 3)\n"
         "# Place policy YAML files in subdirectories of the policy_dir:\n"
-        "#   .ctxfw/policies/fleet/   — tenant-wide, deny-wins (highest priority)\n"
-        "#   .ctxfw/policies/org/     — organization-wide\n"
-        "#   .ctxfw/policies/team/    — team-level\n"
-        "#   .ctxfw/policies/repo/    — repository-level (lowest priority)\n"
+        "#   .ctxfw/policies/fleet/   - tenant-wide, deny-wins (highest priority)\n"
+        "#   .ctxfw/policies/org/     - organization-wide\n"
+        "#   .ctxfw/policies/team/    - team-level\n"
+        "#   .ctxfw/policies/repo/    - repository-level (lowest priority)\n"
         "# Flat policy files in policy_dir/ continue to work unchanged.\n"
         "# Validate with: ctxfw policy validate .ctxfw/policies/\n"
     )
@@ -491,7 +491,7 @@ def init_cmd(force):
     default_policy = Path(".ctxfw/policies/default.yaml")
     if not default_policy.exists():
         default_policy.write_text(
-            "# Default CRE policy\n"
+            "# Default ContextWall policy\n"
             "rules:\n"
             "  - name: block_secrets\n"
             "    scope: content\n"
@@ -506,7 +506,7 @@ def init_cmd(force):
             "denied_paths: []\n"
         )
 
-    click.echo("CRE initialized.")
+    click.echo("ContextWall initialized.")
     click.echo("  Config: ctxfw.yaml")
     click.echo("  Policy: .ctxfw/policies/default.yaml")
     click.echo("  Database: .ctxfw/cre.db (created on first run)")

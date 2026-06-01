@@ -1,4 +1,4 @@
-"""Context Synthesizer — token budget enforcement and bundle assembly."""
+"""Context Synthesizer - token budget enforcement and bundle assembly."""
 
 from __future__ import annotations
 
@@ -213,7 +213,7 @@ class ContextSynthesizer:
             top_str += f" ...and {len(bundle.slices) - 3} more"
         by_reason = Counter(r.reason for r in bundle.excluded_reasons)
         return (
-            f"[CRE Context Bundle]\n"
+            f"[ContextWall Context Bundle]\n"
             f"Task: {bundle.task_type} | Trust: {bundle.trust_range.min:.2f}–{bundle.trust_range.max:.2f} "
             f"(p50: {bundle.trust_range.p50:.2f}) | Tokens: {bundle.total_tokens}/{bundle.token_budget}\n"
             f"Included: {len(bundle.slices)} files | Excluded: {bundle.excluded_count} "

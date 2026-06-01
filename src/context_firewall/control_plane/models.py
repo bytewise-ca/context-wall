@@ -1,7 +1,7 @@
 """Pydantic models for control plane push payloads.
 
 These are the only shapes that cross the network boundary. They contain
-counts, scores, and names — never content, file paths, or prompt text.
+counts, scores, and names - never content, file paths, or prompt text.
 """
 
 from __future__ import annotations

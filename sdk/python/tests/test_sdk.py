@@ -1,4 +1,4 @@
-"""SDK integration tests — runs against a live CRE instance.
+"""SDK integration tests - runs against a live CRE instance.
 
 Set CRE_URL, CRE_API_KEY, and CRE_PROXY_KEY before running:
 
@@ -19,11 +19,11 @@ CRE_PROXY_KEY = os.environ.get("CRE_PROXY_KEY", "")
 
 needs_proxy_key = pytest.mark.skipif(
     not CRE_PROXY_KEY,
-    reason="CRE_PROXY_KEY not set — skipping integration tests",
+    reason="CRE_PROXY_KEY not set - skipping integration tests",
 )
 needs_api_key = pytest.mark.skipif(
     not CRE_API_KEY,
-    reason="CRE_API_KEY not set — skipping admin tests",
+    reason="CRE_API_KEY not set - skipping admin tests",
 )
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -153,7 +153,7 @@ def test_safe_anthropic_raises_cre_blocked_on_injection():
 
 @needs_proxy_key
 def test_safe_anthropic_clean_request_not_blocked():
-    """A clean request should pass CRE and reach the upstream (may fail with auth error — that's fine)."""
+    """A clean request should pass CRE and reach the upstream (may fail with auth error - that's fine)."""
     pytest.importorskip("anthropic")
     from cre_sdk import SafeAnthropic, CREBlockedError
     client = SafeAnthropic(cre_key=CRE_PROXY_KEY, cre_url=CRE_URL)

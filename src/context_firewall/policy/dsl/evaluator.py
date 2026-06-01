@@ -1,4 +1,4 @@
-"""Policy DSL — YAML parser and expression-tree evaluator.
+"""Policy DSL - YAML parser and expression-tree evaluator.
 
 Evaluator is pure Python with no scripting runtime; deterministic at every call.
 """

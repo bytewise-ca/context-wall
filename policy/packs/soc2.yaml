@@ -17,11 +17,11 @@ rules:
     compliance_mapping:
       framework: soc2
       control_id: CC6.1
-      description: "Logical and Physical Access Controls — restrict access to authorized users"
+      description: "Logical and Physical Access Controls - restrict access to authorized users"
 
   - name: soc2-cc6-external-threats
     action: deny
-    reason: "SOC2 CC6.6: external threat — untrusted source injection attempt blocked"
+    reason: "SOC2 CC6.6: external threat - untrusted source injection attempt blocked"
     applies_when:
       source_tier: untrusted
     condition:
@@ -31,7 +31,7 @@ rules:
     compliance_mapping:
       framework: soc2
       control_id: CC6.6
-      description: "Logical and Physical Access Controls — protect against external threats"
+      description: "Logical and Physical Access Controls - protect against external threats"
 
   - name: soc2-cc7-system-monitoring
     action: audit-only
@@ -39,7 +39,7 @@ rules:
     compliance_mapping:
       framework: soc2
       control_id: CC7.2
-      description: "System Operations — monitor system components for anomalies"
+      description: "System Operations - monitor system components for anomalies"
 
   - name: soc2-cc8-change-management
     action: audit-only
@@ -47,7 +47,7 @@ rules:
     compliance_mapping:
       framework: soc2
       control_id: CC8.1
-      description: "Change Management — authorize, design, develop, configure changes"
+      description: "Change Management - authorize, design, develop, configure changes"
 
   - name: soc2-policy-action-logging
     action: audit-only
@@ -55,4 +55,4 @@ rules:
     compliance_mapping:
       framework: soc2
       control_id: CC7.2
-      description: "System Monitoring — all policy enforcement events logged"
+      description: "System Monitoring - all policy enforcement events logged"

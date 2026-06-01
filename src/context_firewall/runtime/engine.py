@@ -1,4 +1,4 @@
-"""Runtime Correlation Engine — async OTLP ingestion pipeline."""
+"""Runtime Correlation Engine - async OTLP ingestion pipeline."""
 
 from __future__ import annotations
 
@@ -124,7 +124,7 @@ class RuntimeCorrelationEngine:
             logger.warning("symbol table load failed; all spans will be unresolved", extra={"error": str(e)})
 
     async def ingest_span(self, span: dict) -> None:
-        """Called by OTLP receiver — non-blocking enqueue."""
+        """Called by OTLP receiver - non-blocking enqueue."""
         if self._queue is None:
             return
         try:

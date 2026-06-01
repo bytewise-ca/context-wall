@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "cre-sdk"
 version = "0.1.0"
-description = "CRE SDK — drop-in wrapper for Anthropic and OpenAI with context firewall enforcement"
+description = "ContextWall SDK - drop-in wrapper for Anthropic and OpenAI with context firewall enforcement"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }

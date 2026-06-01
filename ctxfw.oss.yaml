@@ -1,9 +1,9 @@
-# CRE — OSS configuration
+# ContextWall - OSS configuration
 # Used by docker-compose.oss.yml
 repository_root: /app
 
 # ── Sources ───────────────────────────────────────────────────────────────────
-# Declare context sources here. CRE registers them on every startup (idempotent).
+# Declare context sources here. ContextWall registers them on every startup (idempotent).
 # trust_tier: internal | external | untrusted | regulated
 sources: []
 
@@ -36,7 +36,7 @@ compliance:
 # ── Control plane (optional) ──────────────────────────────────────────────────
 # Connect to the ContextWall managed control plane for fleet-wide visibility.
 # Leave url empty to run fully local (no data leaves this host).
-# Get a registration token from https://app.contextwall.dev → Settings.
+# Get a registration token from https://app.contextwall.io → Settings.
 control_plane:
   url: ""
   registration_token: "${CRE_CONTROL_PLANE_TOKEN:-}"

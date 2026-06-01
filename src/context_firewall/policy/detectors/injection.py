@@ -3,10 +3,10 @@ Multi-layer injection detector for untrusted context documents.
 
 Three independent layers, applied in order of cost (cheapest first):
 
-  Layer 1 — Structural scan   : template markers, bidi control chars, encoding tricks,
+  Layer 1 - Structural scan   : template markers, bidi control chars, encoding tricks,
                                  spaced-letter keyword obfuscation
-  Layer 2 — Normalized regex  : extended patterns on de-obfuscated text
-  Layer 3 — Heuristic scoring : feature extraction that catches semantic paraphrases
+  Layer 2 - Normalized regex  : extended patterns on de-obfuscated text
+  Layer 3 - Heuristic scoring : feature extraction that catches semantic paraphrases
 
 Why three layers?
   Regex catches exact phrasing. Normalization extends regex to Unicode lookalikes.
@@ -63,7 +63,7 @@ def normalize(text: str) -> str:
     - Lowercased for uniform matching
 
     Spaced-letter detection (e.g. "i g n o r e") is handled separately in
-    structural_scan() via _SPACED_KEYWORD_RULES — collapsing spaced runs in
+    structural_scan() via _SPACED_KEYWORD_RULES - collapsing spaced runs in
     normalize() merges adjacent words into one unseparated token, which breaks
     the downstream regex patterns that expect spaces between words.
     """
@@ -105,7 +105,7 @@ _SPACED_KEYWORD_RULES: list[tuple[str, re.Pattern]] = [
 
 _REGEX_RULES: list[tuple[str, re.Pattern, float]] = [
 
-    # Instruction override — core class
+    # Instruction override - core class
     ("instruction_override", re.compile(
         r"(?:"
         r"ignore\s+(?:all\s+)?(?:previous|prior|above|earlier|initial|original|former)\s+"
@@ -384,7 +384,7 @@ _STRUCTURAL_RULES: list[tuple[str, re.Pattern, float]] = [
 
 def structural_scan(text: str) -> DetectionResult | None:
     """Check raw text for structural injection markers, including spaced-letter keywords."""
-    # Spaced-letter keyword obfuscation — checked first because it's definitive
+    # Spaced-letter keyword obfuscation - checked first because it's definitive
     for kw, pattern in _SPACED_KEYWORD_RULES:
         m = pattern.search(text)
         if m:

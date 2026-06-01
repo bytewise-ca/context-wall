@@ -2,7 +2,7 @@ repository_root: /app
 
 # ── Sources ───────────────────────────────────────────────────────────────────
 # Declare all context sources and their trust tier here.
-# On startup CRE registers these automatically — no API calls needed.
+# On startup ContextWall registers these automatically - no API calls needed.
 sources:
   - id: brave-web-search
     type: web

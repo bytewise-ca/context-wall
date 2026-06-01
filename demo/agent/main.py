@@ -1,4 +1,4 @@
-"""CRE Demo Agent — web-browsing Claude agent with context firewall."""
+"""ContextWall Demo Agent - web-browsing Claude agent with context firewall."""
 
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ WITH_CRE = os.environ.get("WITH_CRE", "true").lower() == "true"
 SEARCH_RESULTS = int(os.environ.get("SEARCH_RESULTS", "5"))
 BRAVE_SOURCE_ID = "brave-web-search"
 
-app = FastAPI(title="CRE Demo Agent")
+app = FastAPI(title="ContextWall Demo Agent")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 _claude = anthropic.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
@@ -44,7 +44,7 @@ def _check_required_env() -> None:
         sys.exit(1)
     if not BRAVE_API_KEY:
         logger.warning(
-            "BRAVE_API_KEY not set — /demo/search will return empty results. "
+            "BRAVE_API_KEY not set - /demo/search will return empty results. "
             "Pre-built scenarios (1/2/3) work without it."
         )
 
@@ -72,7 +72,7 @@ async def _ask_claude(task: str, context_docs: list[dict]) -> str:
 
 
 async def _run_with_cre(task: str, raw_docs: list[dict], session_id: str) -> dict:
-    """Filter documents through CRE before passing to Claude."""
+    """Filter documents through ContextWall before passing to Claude."""
     filter_result = await filter_documents(BRAVE_SOURCE_ID, raw_docs, session_id)
     allowed_docs = filter_result.get("documents", [])
     blocked_count = filter_result.get("blocked", 0)
@@ -81,7 +81,7 @@ async def _run_with_cre(task: str, raw_docs: list[dict], session_id: str) -> dic
         return {
             "mode": "PROTECTED",
             "session_id": session_id,
-            "response": "[All retrieved documents were blocked by CRE policy. No content reached Claude.]",
+            "response": "[All retrieved documents were blocked by ContextWall policy. No content reached Claude.]",
             "total_docs": len(raw_docs),
             "allowed_docs": 0,
             "blocked_docs": blocked_count,
@@ -101,7 +101,7 @@ async def _run_with_cre(task: str, raw_docs: list[dict], session_id: str) -> dic
 
 
 async def _run_without_cre(task: str, raw_docs: list[dict], session_id: str) -> dict:
-    """Pass documents directly to Claude — unprotected."""
+    """Pass documents directly to Claude - unprotected."""
     response = await _ask_claude(task, raw_docs)
     return {
         "mode": "UNPROTECTED",
@@ -187,15 +187,15 @@ async def startup():
     _check_required_env()
 
     if WITH_CRE:
-        logger.info("Waiting for CRE to be ready...")
+        logger.info("Waiting for ContextWall to be ready...")
         ready = await wait_for_cre(timeout=60)
         if not ready:
-            logger.error("CRE did not become ready in time — exiting")
+            logger.error("ContextWall did not become ready in time - exiting")
             sys.exit(1)
 
-        logger.info("Registering Brave Search as untrusted source in CRE")
+        logger.info("Registering Brave Search as untrusted source in ContextWall")
         await register_source(BRAVE_SOURCE_ID, "web", "untrusted")
-        logger.info("CRE ready. Demo agent running in PROTECTED mode.")
+        logger.info("ContextWall ready. Demo agent running in PROTECTED mode.")
     else:
         logger.info("Demo agent running in UNPROTECTED mode (WITH_CRE=false)")
 

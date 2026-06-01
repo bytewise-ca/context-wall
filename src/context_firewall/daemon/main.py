@@ -1,4 +1,4 @@
-"""CRE Daemon — single-process asyncio event loop embedding all engines."""
+"""ContextWall Daemon - single-process asyncio event loop embedding all engines."""
 
 from __future__ import annotations
 
@@ -145,7 +145,7 @@ async def run_daemon(config: Config, host: str = "0.0.0.0") -> None:
 
     if not config.compliance_hmac_key:
         logger.warning(
-            "compliance_hmac_key not set — compliance bundles will use a dev key and are NOT "
+            "compliance_hmac_key not set - compliance bundles will use a dev key and are NOT "
             "tamper-evident. Set CRE_COMPLIANCE_HMAC_KEY or compliance_hmac_key in ctxfw.yaml. "
             "Generate one with: python3 -c \"import secrets; print(secrets.token_urlsafe(32))\""
         )
@@ -264,7 +264,7 @@ async def run_daemon(config: Config, host: str = "0.0.0.0") -> None:
             else:
                 await engine.init(config)
             initialized.append(engine)
-            # Check actual health after init — some engines (e.g. graph) init successfully
+            # Check actual health after init - some engines (e.g. graph) init successfully
             # even when their backing store isn't ready, and only report degraded via health_check.
             if hasattr(engine, "health_check"):
                 h = engine.health_check()
@@ -296,7 +296,7 @@ async def run_daemon(config: Config, host: str = "0.0.0.0") -> None:
 
     if degraded:
         logger.warning("━" * 60)
-        logger.warning("CRE started in REDUCED CAPACITY — %d subsystem(s) degraded:", len(degraded))
+        logger.warning("ContextWall started in REDUCED CAPACITY - %d subsystem(s) degraded:", len(degraded))
         for name, msg in degraded:
             logger.warning("  ✗ %-38s %s", name, msg)
         logger.warning("Proxy enforcement and policy engine are fully operational.")
@@ -387,7 +387,7 @@ async def run_daemon(config: Config, host: str = "0.0.0.0") -> None:
         loop="asyncio",
     )
     server = uvicorn.Server(uconfig)
-    logger.info(f"CRE daemon listening on {host}:{config.rest_api.port}")
+    logger.info(f"ContextWall daemon listening on {host}:{config.rest_api.port}")
     await server.serve()
 
 
@@ -424,7 +424,7 @@ def _setup_jobs(scheduler: AsyncIOScheduler, config: Config, engines: dict) -> N
         scheduler.add_job(
             _run_lint,
             "cron",
-            # Run once daily at 03:00 UTC — light query load, results ready for morning review
+            # Run once daily at 03:00 UTC - light query load, results ready for morning review
             hour="3",
             minute="0",
             id="lint_audit",

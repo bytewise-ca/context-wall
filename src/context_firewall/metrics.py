@@ -1,7 +1,7 @@
-"""Prometheus metrics registry for the CRE daemon.
+"""Prometheus metrics registry for the ContextWall daemon.
 
 All metrics are module-level singletons so they accumulate across requests.
-Import and call from API handlers — no threading concerns, prometheus_client
+Import and call from API handlers - no threading concerns, prometheus_client
 uses thread-safe internals.
 
 Scraped at GET /metrics in Prometheus text format.
@@ -15,7 +15,7 @@ from prometheus_client import Counter, Gauge, Histogram, Info, CollectorRegistry
 
 BUILD_INFO = Info(
     "cre_build",
-    "CRE daemon build information",
+    "ContextWall daemon build information",
 )
 BUILD_INFO.info({"version": "0.1.0", "component": "cre-daemon"})
 
@@ -96,5 +96,5 @@ ERRORS = Counter(
 
 PROXY_KEYS_ACTIVE = Gauge(
     "cre_proxy_keys_active",
-    "Number of active (non-revoked) CRE proxy keys",
+    "Number of active (non-revoked) ContextWall proxy keys",
 )

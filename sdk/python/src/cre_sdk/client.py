@@ -1,4 +1,4 @@
-"""CREClient — admin HTTP client for the CRE daemon.
+"""ContextWallClient - admin HTTP client for the ContextWall daemon.
 
 Used for provisioning proxy keys, registering sources, checking health,
 and querying analytics/lint results.
@@ -16,7 +16,7 @@ Example::
         upstream_key="sk-ant-...",
         provider="anthropic",
     )
-    print(result.key)  # sk-cre-xxx — save this
+    print(result.key)  # sk-cre-xxx - save this
 
     # Register a web search source as untrusted
     cre.sources.register(
@@ -337,12 +337,12 @@ class _AsyncLintClient:
 # ── Main clients ───────────────────────────────────────────────────────────────
 
 class CREClient:
-    """Synchronous admin client for the CRE daemon.
+    """Synchronous admin client for the ContextWall daemon.
 
     Args:
-        api_key:  CRE admin API key (set in ctxfw.yaml). Falls back to
+        api_key:  ContextWall admin API key (set in ctxfw.yaml). Falls back to
                   ``CRE_API_KEY`` env var, then ``CRE_API_TOKEN``.
-        base_url: CRE daemon URL. Falls back to ``CRE_URL`` env var,
+        base_url: ContextWall daemon URL. Falls back to ``CTXFW_URL`` env var,
                   then ``http://localhost:8080``.
         timeout:  Request timeout in seconds (default 30).
     """
@@ -413,7 +413,7 @@ class CREClient:
 
 
 class AsyncCREClient:
-    """Async admin client for the CRE daemon. Same API as CREClient but awaitable."""
+    """Async admin client for the ContextWall daemon. Same API as CREClient but awaitable."""
 
     def __init__(
         self,

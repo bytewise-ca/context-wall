@@ -1,4 +1,4 @@
-"""Source Trust Registry — full CRUD with trust tier cache and compliance scope."""
+"""Source Trust Registry - full CRUD with trust tier cache and compliance scope."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from context_firewall.source.types import SourceTrustTier
 
 logger = logging.getLogger(__name__)
 
-# Default mapping — overridden by compliance.classification_frameworks in ctxfw.yaml
+# Default mapping - overridden by compliance.classification_frameworks in ctxfw.yaml
 _DEFAULT_CLASSIFICATION_FRAMEWORKS: dict[str, list[str]] = {
     "phi": ["hipaa"],
     "pii": ["hipaa", "gdpr"],
@@ -138,7 +138,7 @@ class SourceRegistry:
         self._cache = {row["id"]: _row_to_source(row) for row in rows}
 
     def get_trust_tier(self, source_id: str) -> SourceTrustTier:
-        """Hot-path O(1) lookup — always served from in-memory cache."""
+        """Hot-path O(1) lookup - always served from in-memory cache."""
         source = self._cache.get(source_id)
         if source is None:
             logger.warning("unknown source_id, defaulting to untrusted", extra={"source_id": source_id})

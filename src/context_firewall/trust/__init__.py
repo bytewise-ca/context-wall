@@ -1,4 +1,4 @@
-"""Trust Scoring Engine — 8-signal trust computation."""
+"""Trust Scoring Engine - 8-signal trust computation."""
 
 from context_firewall.trust.engine import TrustScoringEngine
 

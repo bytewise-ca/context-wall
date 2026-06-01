@@ -2,7 +2,7 @@
 
 Each migration is a (version, description, sql_statements) tuple.
 The runner applies only migrations whose version is higher than the
-current schema_version stored in the DB — safe to run repeatedly.
+current schema_version stored in the DB - safe to run repeatedly.
 
 Adding a migration:
     1. Append a new entry to _MIGRATIONS with the next version number.
@@ -396,7 +396,7 @@ async def run_migrations(db_path: str) -> None:
             except Exception as e:
                 await db.rollback()
                 logger.error(
-                    "migration %d failed — rolling back: %s", version, e
+                    "migration %d failed - rolling back: %s", version, e
                 )
                 raise RuntimeError(f"Migration {version} ({description}) failed: {e}") from e
 

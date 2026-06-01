@@ -1,4 +1,4 @@
-"""Provenance Engine — async write-behind using asyncio.Queue."""
+"""Provenance Engine - async write-behind using asyncio.Queue."""
 
 from __future__ import annotations
 
@@ -87,7 +87,7 @@ class ProvenanceEngine:
             try:
                 q.put_nowait(event_dict)
             except asyncio.QueueFull:
-                dead.append(q)  # slow consumer — drop
+                dead.append(q)  # slow consumer - drop
         for q in dead:
             self.unsubscribe_events(q)
 
@@ -501,7 +501,7 @@ class ProvenanceEngine:
         if self._db is None:
             return {"blocked_artifacts": 0, "policy_violations": 0, "total_requests": 0, "active_sessions": 0}
         try:
-            # SQLite datetime window — aiosqlite uses sqlite
+            # SQLite datetime window - aiosqlite uses sqlite
             window = f"-{window_hours} hours"
             # Violations: enforcement actions that are actual blocks/excludes (not audit markers)
             async with self._db.execute(
@@ -588,7 +588,7 @@ class ProvenanceEngine:
             await self._reward_source_trust(event.source_id, event.occurred_at)
 
     async def _reward_source_trust(self, source_id: str, occurred_at: datetime) -> None:
-        """Reduce penalty 10% per positive outcome — complements time-based decay."""
+        """Reduce penalty 10% per positive outcome - complements time-based decay."""
         _REWARD_FACTOR = self._config.enforcement.reward_factor if self._config else 0.90
         try:
             async with self._db.execute(

@@ -1,4 +1,4 @@
-"""Context Entropy Engine — computes entropy annotations offline."""
+"""Context Entropy Engine - computes entropy annotations offline."""
 
 from __future__ import annotations
 

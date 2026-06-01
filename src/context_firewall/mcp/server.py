@@ -1,4 +1,4 @@
-"""FastMCP server with CRE tools."""
+"""FastMCP server with ContextWall tools."""
 
 from __future__ import annotations
 
@@ -111,7 +111,7 @@ def create_mcp_server(engines: dict[str, Any] | None = None, config=None) -> Fas
             repo_root = Path(config.repository_root if config else ".")
             gp = graph_path(repo_root)
             if not gp.exists():
-                return json.dumps({"error": "graph not found — run context-compiler index"})
+                return json.dumps({"error": "graph not found - run context-compiler index"})
 
             db = open_database(repo_root)
             conn = kuzu.Connection(db)

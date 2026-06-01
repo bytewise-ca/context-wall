@@ -11,7 +11,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class SourceDeclaration(BaseModel):
-    """Declarative source definition — declared in ctxfw.yaml, registered on startup."""
+    """Declarative source definition - declared in ctxfw.yaml, registered on startup."""
     id: str
     type: str = "unknown"
     trust_tier: str = "untrusted"

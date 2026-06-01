@@ -1,4 +1,4 @@
-"""CRE API client for the demo agent."""
+"""ContextWall API client for the demo agent."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Analytics Engine — DuckDB in-process queries with snapshot pre-computation."""
+"""Analytics Engine - DuckDB in-process queries with snapshot pre-computation."""
 
 from __future__ import annotations
 

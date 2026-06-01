@@ -43,7 +43,7 @@ def create_app(
     config: Config,
     engines: dict[str, Any] | None = None,
 ) -> FastAPI:
-    app = FastAPI(title="CRE API", version="0.1.0")
+    app = FastAPI(title="ContextWall API", version="0.1.0")
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -208,10 +208,10 @@ def create_app(
         }
         if not graph_ready:
             response["graph_status"] = "unavailable"
-            response["graph_message"] = "KuzuDB graph not indexed — run 'context-compiler index' on the repository first"
+            response["graph_message"] = "KuzuDB graph not indexed - run 'context-compiler index' on the repository first"
         elif not bundle.slices:
             response["graph_status"] = "no_candidates"
-            response["graph_message"] = "Graph is ready but no candidates matched this task — check repository_root or task description"
+            response["graph_message"] = "Graph is ready but no candidates matched this task - check repository_root or task description"
         else:
             response["graph_status"] = "ok"
         return response
@@ -309,7 +309,7 @@ def create_app(
         limit: int = 50,
         _token: APIToken = Depends(require_auth),
     ):
-        """Latest events across all sessions — used by the live feed."""
+        """Latest events across all sessions - used by the live feed."""
         provenance = _engines.get("provenance")
         if not provenance:
             return {"events": []}
@@ -384,7 +384,7 @@ def create_app(
         # Run injection detection on the content regardless of policy
         injection_result = detect_injection(content)
 
-        # Run through policy engine — events are tagged with sim: prefix so they
+        # Run through policy engine - events are tagged with sim: prefix so they
         # can be filtered from the main feed; no provenance manipulation needed.
         verdict = "allow"
         if policy:
@@ -884,7 +884,7 @@ def create_app(
         Returns counts for:
           - layer1_structural  (bidi chars, zero-width, template markers)
           - layer2_regex       (normalized pattern matching)
-          - layer3_heuristic   (semantic feature scoring — catches paraphrases)
+          - layer3_heuristic   (semantic feature scoring - catches paraphrases)
           - base_scanner       (original regex scanner: prompt_injection, PII, secrets)
 
         High demo value: shows what Layer 3 caught that L1+L2 missed.

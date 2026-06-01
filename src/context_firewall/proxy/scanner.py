@@ -2,13 +2,13 @@
 
 Runs on every message before it is forwarded to the upstream LLM.
 Detects prompt injection, credential leakage, and PII patterns.
-Operates entirely in-process — no external calls, no LLM inference.
+Operates entirely in-process - no external calls, no LLM inference.
 
 Trust-tier-aware scanning:
-  internal   — lightest touch; PII warn-only, disabled by default
-  external   — PII enabled (warn), same injection threshold
-  untrusted  — PII enabled and blocks; untrusted source exfiltration risk
-  regulated  — same as untrusted; PHI/PII in requests triggers compliance block
+  internal   - lightest touch; PII warn-only, disabled by default
+  external   - PII enabled (warn), same injection threshold
+  untrusted  - PII enabled and blocks; untrusted source exfiltration risk
+  regulated  - same as untrusted; PHI/PII in requests triggers compliance block
 """
 
 from __future__ import annotations
@@ -105,10 +105,10 @@ def scan_messages(
     blocking violation is found.
 
     trust_tier drives PII enforcement:
-      untrusted / regulated — PII enabled, severity=block (exfiltration / compliance risk)
-      external              — PII enabled, severity=warn
-      internal              — PII disabled by default (unchanged by this parameter)
-      None                  — falls back to scan_pii kwarg
+      untrusted / regulated - PII enabled, severity=block (exfiltration / compliance risk)
+      external              - PII enabled, severity=warn
+      internal              - PII disabled by default (unchanged by this parameter)
+      None                  - falls back to scan_pii kwarg
     """
     # Resolve tier value once
     tier_val = trust_tier.value if trust_tier is not None and hasattr(trust_tier, "value") else (
@@ -145,7 +145,7 @@ def scan_messages(
             if not text:
                 continue
 
-            # Prompt injection — always block regardless of tier
+            # Prompt injection - always block regardless of tier
             for pat in _INJECTION_PATTERNS:
                 m = pat.search(text)
                 if m:
@@ -156,11 +156,11 @@ def scan_messages(
                         excerpt=_excerpt(text, m),
                     ))
 
-            # Secret leakage — always block regardless of tier
+            # Secret leakage - always block regardless of tier
             for pat, label in _SECRET_PATTERNS:
                 m = pat.search(text)
                 if m:
-                    # Skip if it looks like a CRE key (we issue those)
+                    # Skip if it looks like a ContextWall key (we issue those)
                     matched = m.group(0)
                     if matched.startswith("sk-cre-"):
                         continue
@@ -171,7 +171,7 @@ def scan_messages(
                         excerpt=_excerpt(text, m),
                     ))
 
-            # PII — severity and enablement depend on source trust tier
+            # PII - severity and enablement depend on source trust tier
             if pii_enabled:
                 for pat, label in _PII_PATTERNS:
                     m = pat.search(text)

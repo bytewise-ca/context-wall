@@ -1,1 +1,1 @@
-"""Transparent LLM proxy — zero-code-change CRE enforcement."""
+"""Transparent LLM proxy - zero-code-change ContextWall enforcement."""

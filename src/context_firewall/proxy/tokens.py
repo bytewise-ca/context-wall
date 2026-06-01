@@ -1,7 +1,7 @@
-"""CRE proxy token management.
+"""ContextWall proxy token management.
 
-CRE issues its own tokens (sk-cre-xxx) that map to real upstream API keys.
-Developers point ANTHROPIC_BASE_URL / OPENAI_BASE_URL at CRE and never
+ContextWall issues its own tokens (sk-cre-xxx) that map to real upstream API keys.
+Developers point ANTHROPIC_BASE_URL / OPENAI_BASE_URL at ContextWall and never
 handle the real provider key directly.
 """
 
@@ -44,7 +44,7 @@ class ProxyToken(BaseModel):
 
 
 class TokenStore:
-    """SQLite-backed store for CRE proxy tokens."""
+    """SQLite-backed store for ContextWall proxy tokens."""
 
     def __init__(self, db: aiosqlite.Connection | None = None) -> None:
         self._db: aiosqlite.Connection | None = db
@@ -54,7 +54,7 @@ class TokenStore:
 
     def _require_db(self) -> aiosqlite.Connection:
         if self._db is None:
-            raise RuntimeError("TokenStore not initialized — DB not set")
+            raise RuntimeError("TokenStore not initialized - DB not set")
         return self._db
 
     async def create(
@@ -65,7 +65,7 @@ class TokenStore:
         provider: str = "any",
         scopes: list[str] | None = None,
     ) -> tuple[str, "ProxyToken"]:
-        """Returns (raw_key, token_record). raw_key is shown once — caller must store it."""
+        """Returns (raw_key, token_record). raw_key is shown once - caller must store it."""
         import json
         db = self._require_db()
         raw = _generate_raw()
@@ -93,7 +93,7 @@ class TokenStore:
         return raw, token
 
     async def lookup(self, raw_key: str) -> "ProxyToken | None":
-        """Authenticate a raw CRE key. Returns None if invalid or revoked."""
+        """Authenticate a raw ContextWall key. Returns None if invalid or revoked."""
         import json
         db = self._require_db()
         key_hash = _hash_key(raw_key)

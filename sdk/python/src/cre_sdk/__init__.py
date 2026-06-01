@@ -1,4 +1,4 @@
-"""CRE SDK — drop-in context firewall for Anthropic and OpenAI agents.
+"""CRE SDK - drop-in context firewall for Anthropic and OpenAI agents.
 
 Quick start::
 
@@ -26,7 +26,7 @@ Provisioning a key (admin)::
         project_id="my-agent",
         upstream_key="sk-ant-...",
     )
-    print(result.key)   # sk-cre-xxx  — store this securely
+    print(result.key)   # sk-cre-xxx  - store this securely
 """
 
 from .exceptions import CREError, CREBlockedError, CREUnavailableError, CREAuthError

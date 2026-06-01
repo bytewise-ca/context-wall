@@ -1,4 +1,4 @@
-"""SafeAnthropic — drop-in Anthropic client with CRE enforcement.
+"""SafeAnthropic - drop-in Anthropic client with CRE enforcement.
 
 Usage::
 

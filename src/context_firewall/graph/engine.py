@@ -1,4 +1,4 @@
-"""Repository Graph Engine — wraps context-compiler's retrieval pipeline."""
+"""Repository Graph Engine - wraps context-compiler's retrieval pipeline."""
 
 from __future__ import annotations
 
@@ -46,7 +46,7 @@ class RepositoryGraphEngine:
         return SubsystemHealth(
             name=self.name,
             healthy=self._ready,
-            message="KuzuDB graph ready" if self._ready else "KuzuDB graph missing — run context-compiler index",
+            message="KuzuDB graph ready" if self._ready else "KuzuDB graph missing - run context-compiler index",
         )
 
     async def shutdown(self) -> None:
@@ -105,12 +105,12 @@ class RepositoryGraphEngine:
         db = open_database(root)
         conn = kuzu.Connection(db)
 
-        # Map CRE task type to context-compiler task type
+        # Map ContextWall task type to context-compiler task type
         cc_type_map = {
             "BUG_FIX": CCTaskType.BUG_FIX,
             "NEW_FEATURE": CCTaskType.NEW_FEATURE,
             "REFACTOR": CCTaskType.REFACTOR,
-            # CRE extensions fall back to NEW_FEATURE for traversal
+            # ContextWall extensions fall back to NEW_FEATURE for traversal
             "SECURITY_REVIEW": CCTaskType.NEW_FEATURE,
             "DEPENDENCY_AUDIT": CCTaskType.NEW_FEATURE,
         }
@@ -122,7 +122,7 @@ class RepositoryGraphEngine:
 
         traversal = traverse(match_result.candidates, cc_task_type, conn)
 
-        # Use a generous budget — CRE trust scoring + synthesizer apply their own cutoff
+        # Use a generous budget - ContextWall trust scoring + synthesizer apply their own cutoff
         bundle = score_and_compile(
             traversal.candidates,
             budget=max_nodes * 2000,  # rough token estimate
@@ -141,7 +141,7 @@ class RepositoryGraphEngine:
                 node_id=c.node_id,
                 file_path=c.file_path,
                 content=content,
-                trust_score=sn.score,  # context-compiler score; CRE will recompute
+                trust_score=sn.score,  # context-compiler score; ContextWall will recompute
                 token_count=c.token_count,
                 language=c.language.lower() if c.language else "",
                 symbols=[c.symbol_name] if c.symbol_name else [],

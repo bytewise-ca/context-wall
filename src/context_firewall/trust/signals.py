@@ -1,4 +1,4 @@
-"""Individual trust signal computations — all read from pre-indexed data."""
+"""Individual trust signal computations - all read from pre-indexed data."""
 
 from __future__ import annotations
 
@@ -44,7 +44,7 @@ async def compute_runtime_evidence(node_id: str, db: aiosqlite.Connection) -> fl
         ) as cursor:
             row = await cursor.fetchone()
         if row is None:
-            return 0.5  # neutral fallback — no OTel data yet
+            return 0.5  # neutral fallback - no OTel data yet
         invocations = row["invocation_count"]
         exception_rate = row["exception_rate"]
         degraded = bool(row["latency_degraded"])
@@ -89,7 +89,7 @@ async def compute_freshness(file_path: str, db: aiosqlite.Connection) -> float:
 
 
 async def compute_stability(file_path: str, db: aiosqlite.Connection) -> float:
-    """Inverse churn rate — fewer commits = more stable."""
+    """Inverse churn rate - fewer commits = more stable."""
     try:
         async with db.execute(
             "SELECT commit_count_30d FROM git_metadata WHERE file_path = ?",
@@ -134,7 +134,7 @@ async def compute_entropy_contribution(node_id: str, db: aiosqlite.Connection) -
 
 def compute_verification(content: str, file_path: str) -> float:
     """Proxy: presence of test co-location or assertion patterns."""
-    # Simple heuristic — look for test patterns in neighbouring paths
+    # Simple heuristic - look for test patterns in neighbouring paths
     if "test" in file_path.lower() or "spec" in file_path.lower():
         return 0.8
     if "_test." in file_path or ".test." in file_path:

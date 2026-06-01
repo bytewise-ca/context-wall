@@ -1,4 +1,4 @@
-"""Policy Engine — multi-layer detection and access control."""
+"""Policy Engine - multi-layer detection and access control."""
 
 __all__ = ["PolicyEngine"]
 

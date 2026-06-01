@@ -1,4 +1,4 @@
-"""Trust Scoring Engine — computes weighted trust scores for candidate nodes."""
+"""Trust Scoring Engine - computes weighted trust scores for candidate nodes."""
 
 from __future__ import annotations
 

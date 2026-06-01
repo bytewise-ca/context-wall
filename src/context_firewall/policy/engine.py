@@ -1,4 +1,4 @@
-"""Policy Engine — evaluates compiled policy rules against FileSlice candidates."""
+"""Policy Engine - evaluates compiled policy rules against FileSlice candidates."""
 
 from __future__ import annotations
 
@@ -38,7 +38,7 @@ _BUILTIN_PII_PATTERNS: list[tuple[str, re.Pattern]] = [
     ("phone_us", re.compile(r"\b\(?\d{3}\)?[-.\s]\d{3}[-.\s]\d{4}\b")),
 ]
 
-# _INJECTION_PATTERNS removed — injection detection now handled by
+# _INJECTION_PATTERNS removed - injection detection now handled by
 # context_firewall.policy.detectors.injection (multi-layer: structural + regex + heuristic)
 
 
@@ -358,7 +358,7 @@ class PolicyEngine:
                 if result.detected:
                     return False, None, True
 
-        # DSL four-layer rules — fleet deny wins, then other layers
+        # DSL four-layer rules - fleet deny wins, then other layers
         if self._dsl_cache:
             stack = self._dsl_cache.get()
             if stack:

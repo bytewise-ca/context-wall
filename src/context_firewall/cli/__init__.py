@@ -1,4 +1,4 @@
-"""Click CLI — ctxfw command."""
+"""Click CLI - ctxfw command."""
 
 from context_firewall.cli.main import cli
 

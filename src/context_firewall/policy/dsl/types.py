@@ -1,4 +1,4 @@
-"""Policy DSL — type definitions for expression-tree conditions."""
+"""Policy DSL - type definitions for expression-tree conditions."""
 
 from __future__ import annotations
 

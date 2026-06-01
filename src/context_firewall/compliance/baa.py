@@ -1,4 +1,4 @@
-"""BAA (Business Associate Agreement) mode — PHI/PII redaction and retention enforcement.
+"""BAA (Business Associate Agreement) mode - PHI/PII redaction and retention enforcement.
 
 Tasks 8.10–8.11.
 """
