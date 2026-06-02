@@ -6,9 +6,8 @@ import asyncio
 import logging
 import time
 
-import aiosqlite
-
 from context_firewall.config import Config
+from context_firewall.db.connection import get_db
 from context_firewall.models import PipelineContext, RankedSlice, SubsystemHealth
 from context_firewall.trust.signals import (
     compute_consistency,
@@ -44,21 +43,16 @@ class TrustScoringEngine:
     def __init__(self) -> None:
         self._config: Config | None = None
         self._weights: dict[str, float] = DEFAULT_WEIGHTS.copy()
-        self._db: aiosqlite.Connection | None = None
 
     async def init(self, config: Config) -> None:
         self._config = config
-        if config.trust.weights:
-            self._weights = {**DEFAULT_WEIGHTS, **config.trust.weights}
-        from context_firewall.db.connection import get_db
-        self._db = await get_db()
         logger.info("TrustScoringEngine initialized")
 
     def health_check(self) -> SubsystemHealth:
-        return SubsystemHealth(name=self.name, healthy=self._db is not None)
+        return SubsystemHealth(name=self.name, healthy=True)
 
     async def shutdown(self) -> None:
-        self._db = None
+        pass
 
     async def score_candidates(
         self,
@@ -69,11 +63,9 @@ class TrustScoringEngine:
         if not candidates:
             return []
 
-        # Score all candidates concurrently
         tasks = [self._score_single(c, ctx) for c in candidates]
         scored = await asyncio.gather(*tasks)
 
-        # Apply trust cutoff from config
         cutoff = self._config.graph.trust_cutoff if self._config else 0.30
         result = [s for s in scored if s.trust_score >= cutoff]
         result.sort(key=lambda s: s.trust_score, reverse=True)
@@ -86,7 +78,7 @@ class TrustScoringEngine:
         return result
 
     async def _score_single(self, candidate: RankedSlice, ctx: PipelineContext) -> RankedSlice:
-        db = self._db
+        db = await get_db()
         node_id = candidate.node_id
         file_path = candidate.file_path
         content = candidate.content
@@ -96,18 +88,13 @@ class TrustScoringEngine:
         consistency = compute_consistency(content)
         injection = compute_injection_risk(content)
 
-        if db is not None:
-            runtime, freshness, stability, entropy, enforcement = await asyncio.gather(
-                compute_runtime_evidence(node_id, db),
-                compute_freshness(file_path, db),
-                compute_stability(file_path, db),
-                compute_entropy_contribution(node_id, db),
-                compute_enforcement_penalty(candidate.source_id, db),
-            )
-        else:
-            runtime = freshness = stability = 0.5
-            entropy = 0.30
-            enforcement = 0.0
+        runtime, freshness, stability, entropy, enforcement = await asyncio.gather(
+            compute_runtime_evidence(node_id, db),
+            compute_freshness(file_path, db),
+            compute_stability(file_path, db),
+            compute_entropy_contribution(node_id, db),
+            compute_enforcement_penalty(candidate.source_id, db),
+        )
 
         w = self._weights
         raw_score = (
@@ -117,9 +104,9 @@ class TrustScoringEngine:
             + w["stability"] * stability
             + w["verification"] * verification
             + w["consistency"] * consistency
-            + w["injection_risk"] * injection  # already negative weight
-            + w["entropy_contribution"] * entropy  # already negative weight
-            + w["enforcement_penalty"] * enforcement  # already negative weight
+            + w["injection_risk"] * injection
+            + w["entropy_contribution"] * entropy
+            + w["enforcement_penalty"] * enforcement
         )
         trust_score = max(0.0, min(1.0, raw_score))
 

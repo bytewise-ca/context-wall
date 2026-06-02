@@ -15,8 +15,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-import aiosqlite
-
 from context_firewall.compliance.chain import (
     CHAIN_GENESIS_HASH,
     ChainEntry,
@@ -110,13 +108,11 @@ class ExportScope:
 class ComplianceExporter:
     def __init__(
         self,
-        db_path: str,
         hmac_key: str,
         baa_mode: bool = False,
         key_dir: Path | None = None,
         tenant_id: str = "",
     ) -> None:
-        self._db_path = db_path
         self._hmac_key = hmac_key
         self._baa_mode = baa_mode
         self._key_dir = key_dir or Path(".ctxfw/keys")
@@ -213,10 +209,10 @@ class ComplianceExporter:
         query += " ORDER BY COALESCE(pc.sequence, 0), pe.occurred_at ASC"
 
         try:
-            async with aiosqlite.connect(self._db_path) as db:
-                db.row_factory = aiosqlite.Row
-                async with db.execute(query, params) as cur:
-                    rows = await cur.fetchall()
+            from context_firewall.db.connection import get_db
+            db = await get_db()
+            async with db.execute(query, params) as cur:
+                rows = await cur.fetchall()
             return [dict(r) for r in rows]
         except Exception as e:
             logger.error("export fetch failed: %s", e)

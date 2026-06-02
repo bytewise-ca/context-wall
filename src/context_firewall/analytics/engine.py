@@ -112,7 +112,7 @@ class AnalyticsEngine:
         return SubsystemHealth(name=self.name, healthy=True)
 
     async def shutdown(self) -> None:
-        self._db = None
+        pass
 
     async def get_retrieval_metrics(self) -> dict:
         snapshot = await self._latest_snapshot("retrieval_metrics")
@@ -131,9 +131,8 @@ class AnalyticsEngine:
             return {"data": [], "error": str(e)}
 
     async def get_trust_degradation(self) -> dict:
-        cfg = self._config.analytics if self._config else None
-        threshold = cfg.degradation_threshold if cfg else 0.15
-        window_days = cfg.degradation_window_days if cfg else 30
+        threshold = 0.15
+        window_days = 30
         try:
             loop = asyncio.get_event_loop()
             data = await loop.run_in_executor(

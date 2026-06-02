@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
 
-import aiosqlite
+from context_firewall.db.connection import get_db
 
 logger = logging.getLogger(__name__)
 
@@ -67,11 +67,9 @@ class LintEngine:
     critical = False
 
     def __init__(self) -> None:
-        self._db_path: str = ""
         self._ready = False
 
     async def init(self, config: Any) -> None:
-        self._db_path = config.storage.db_path
         self._ready = True
 
     def health_check(self):
@@ -86,12 +84,11 @@ class LintEngine:
             ran_at=datetime.now(timezone.utc).isoformat(),
             window_days=window_days,
         )
-        async with aiosqlite.connect(self._db_path) as db:
-            db.row_factory = aiosqlite.Row
-            await self._check_orphan_sessions(db, report, window_days)
-            await self._check_tier_drift(db, report, window_days)
-            await self._check_stale_rules(db, report, window_days)
-            await self._check_contradictions(db, report, window_days)
+        db = await get_db()
+        await self._check_orphan_sessions(db, report, window_days)
+        await self._check_tier_drift(db, report, window_days)
+        await self._check_stale_rules(db, report, window_days)
+        await self._check_contradictions(db, report, window_days)
 
         await self._persist(report)
         logger.info(
@@ -104,7 +101,7 @@ class LintEngine:
     # ── Individual checks ─────────────────────────────────────────────────────
 
     async def _check_orphan_sessions(
-        self, db: aiosqlite.Connection, report: LintReport, window_days: int
+        self, db, report: LintReport, window_days: int
     ) -> None:
         """Sessions with proxy activity but no recorded outcomes, older than 24h."""
         try:
@@ -138,7 +135,7 @@ class LintEngine:
             logger.debug("orphan session check skipped: %s", e)
 
     async def _check_tier_drift(
-        self, db: aiosqlite.Connection, report: LintReport, window_days: int
+        self, db, report: LintReport, window_days: int
     ) -> None:
         """Sources whose proxy block rate exceeds 30% - may warrant a trust tier downgrade."""
         try:
@@ -191,7 +188,7 @@ class LintEngine:
             logger.debug("tier drift check skipped: %s", e)
 
     async def _check_stale_rules(
-        self, db: aiosqlite.Connection, report: LintReport, window_days: int
+        self, db, report: LintReport, window_days: int
     ) -> None:
         """Policy rules that fired >60 days ago - may be dead code."""
         try:
@@ -224,7 +221,7 @@ class LintEngine:
             logger.debug("stale rule check skipped: %s", e)
 
     async def _check_contradictions(
-        self, db: aiosqlite.Connection, report: LintReport, window_days: int
+        self, db, report: LintReport, window_days: int
     ) -> None:
         """Pattern names that triggered both blocking and audit-only actions - conflicting policy."""
         try:
@@ -266,51 +263,43 @@ class LintEngine:
 
     async def _persist(self, report: LintReport) -> None:
         try:
-            async with aiosqlite.connect(self._db_path) as db:
-                await db.execute("DELETE FROM lint_findings")
-                await db.executemany(
-                    """
-                    INSERT INTO lint_findings
-                        (ran_at, window_days, category, severity, subject, detail, suggestion)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    [
-                        (
-                            report.ran_at,
-                            report.window_days,
-                            f.category,
-                            f.severity,
-                            f.subject,
-                            f.detail,
-                            f.suggestion,
-                        )
-                        for f in report.findings
-                    ],
-                )
-                await db.commit()
+            db = await get_db()
+            await db.execute("DELETE FROM lint_findings")
+            await db.executemany(
+                """
+                INSERT INTO lint_findings
+                    (ran_at, window_days, category, severity, subject, detail, suggestion)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    (report.ran_at, report.window_days,
+                     f.category, f.severity, f.subject, f.detail, f.suggestion)
+                    for f in report.findings
+                ],
+            )
+            await db.commit()
         except Exception as e:
             logger.warning("lint findings persist failed (non-fatal): %s", e)
 
     async def get_latest(self) -> dict[str, Any] | None:
         """Return the most recent lint run from the DB."""
         try:
-            async with aiosqlite.connect(self._db_path) as db:
-                db.row_factory = aiosqlite.Row
-                async with db.execute(
-                    "SELECT MAX(ran_at) AS ran_at, MAX(window_days) AS window_days FROM lint_findings"
-                ) as cur:
-                    meta = await cur.fetchone()
-                if not meta or not meta["ran_at"]:
-                    return None
+            db = await get_db()
+            async with db.execute(
+                "SELECT MAX(ran_at) AS ran_at, MAX(window_days) AS window_days FROM lint_findings"
+            ) as cur:
+                meta = await cur.fetchone()
+            if not meta or not meta["ran_at"]:
+                return None
 
-                ran_at = meta["ran_at"]
-                window_days = meta["window_days"]
+            ran_at = meta["ran_at"]
+            window_days = meta["window_days"]
 
-                async with db.execute(
-                    "SELECT category, severity, subject, detail, suggestion FROM lint_findings WHERE ran_at = ?",
-                    (ran_at,),
-                ) as cur:
-                    rows = await cur.fetchall()
+            async with db.execute(
+                "SELECT category, severity, subject, detail, suggestion FROM lint_findings WHERE ran_at = ?",
+                (ran_at,),
+            ) as cur:
+                rows = await cur.fetchall()
 
             findings = [
                 LintFinding(
@@ -327,8 +316,7 @@ class LintEngine:
                 summary[f.severity] = summary.get(f.severity, 0) + 1
                 summary[f.category] = summary.get(f.category, 0) + 1
 
-            report = LintReport(ran_at=ran_at, window_days=window_days, findings=findings, summary=summary)
-            return report.as_dict()
+            return LintReport(ran_at=ran_at, window_days=window_days, findings=findings, summary=summary).as_dict()
         except Exception as e:
             logger.warning("lint get_latest failed: %s", e)
             return None

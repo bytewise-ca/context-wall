@@ -83,18 +83,14 @@ class RuntimeCorrelationEngine:
         self._config = config
         from context_firewall.db.connection import get_db
         self._db = await get_db()
-        self._queue = asyncio.Queue(maxsize=config.otel.queue_size)
+        self._queue = asyncio.Queue(maxsize=10_000)
         await self._load_symbol_table()
 
-        if config.otel.enabled:
-            for _ in range(config.otel.consumer_workers):
-                task = asyncio.create_task(self._consumer_loop())
-                self._consumer_tasks.append(task)
-            self._flush_task = asyncio.create_task(self._flush_loop())
-            logger.info(
-                "RuntimeCorrelationEngine initialized",
-                extra={"workers": config.otel.consumer_workers},
-            )
+        for _ in range(4):
+            task = asyncio.create_task(self._consumer_loop())
+            self._consumer_tasks.append(task)
+        self._flush_task = asyncio.create_task(self._flush_loop())
+        logger.info("RuntimeCorrelationEngine initialized")
 
     async def _load_symbol_table(self) -> None:
         try:
@@ -133,8 +129,7 @@ class RuntimeCorrelationEngine:
             logger.debug("span dropped: queue full")
 
     async def _consumer_loop(self) -> None:
-        cfg = self._config.otel if self._config else None
-        fuzzy_threshold = cfg.fuzzy_threshold if cfg else 0.75
+        fuzzy_threshold = 0.75
         while True:
             try:
                 span = await self._queue.get()
@@ -159,9 +154,7 @@ class RuntimeCorrelationEngine:
             return
         self._pending_traces.setdefault(trace_id, []).append({**span, "_node_id": node_id})
 
-        cfg = self._config.otel if self._config else None
-        timeout = cfg.trace_assembly_timeout_sec if cfg else 30
-        asyncio.get_event_loop().call_later(timeout, self._finalize_trace, trace_id)
+        asyncio.get_event_loop().call_later(30, self._finalize_trace, trace_id)
 
     def _finalize_trace(self, trace_id: str) -> None:
         spans = self._pending_traces.pop(trace_id, [])
@@ -201,9 +194,8 @@ class RuntimeCorrelationEngine:
             logger.error("service edge write failed", extra={"error": str(e)})
 
     async def _flush_loop(self) -> None:
-        cfg = self._config.otel if self._config else None
-        interval_s = (cfg.signal_batch_flush_ms if cfg else 500) / 1000.0
-        batch_size = cfg.signal_batch_size if cfg else 100
+        interval_s = 0.5
+        batch_size = 100
 
         while True:
             try:
@@ -235,9 +227,8 @@ class RuntimeCorrelationEngine:
             if s["duration_ms"] > 0:
                 aggregated[nid]["durations"].append(s["duration_ms"])
 
-        cfg = self._config.otel if self._config else None
-        latency_threshold = cfg.latency_degraded_threshold_ms if cfg else 2000
-        exception_threshold = cfg.exception_rate_high_threshold if cfg else 0.10
+        latency_threshold = 2000
+        exception_threshold = 0.10
 
         for node_id, agg in aggregated.items():
             invocations = agg["invocations"]

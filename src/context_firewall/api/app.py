@@ -767,7 +767,6 @@ def create_app(
         hmac_key = config.compliance_hmac_key or "dev-key"
         baa_mode = getattr(config, "compliance_baa_mode", False)
         return ComplianceExporter(
-            db_path=config.storage.db_path,
             hmac_key=hmac_key,
             baa_mode=baa_mode,
         )

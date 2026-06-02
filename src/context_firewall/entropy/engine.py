@@ -2,16 +2,14 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import re
 from datetime import datetime, timezone
 from pathlib import Path
 
-import aiosqlite
-
 from context_firewall.config import Config
+from context_firewall.db.connection import get_db
 from context_firewall.models import EntropyAnnotation, SubsystemHealth
 
 logger = logging.getLogger(__name__)
@@ -77,7 +75,6 @@ def _compute_divergent_execution_paths(content: str) -> float:
     """Estimate branching complexity from structural patterns."""
     lines = content.split("\n")
     total = max(1, len(lines))
-    # Count branching constructs normalized to file length
     branches = 0
     for line in lines:
         stripped = line.lstrip()
@@ -85,7 +82,6 @@ def _compute_divergent_execution_paths(content: str) -> float:
             branches += 1
         elif re.match(r"(for |while )", stripped):
             branches += 0.5
-    # Also penalize high cyclomatic density: > 1 branch per 8 lines is high
     density = branches / (total / 8)
     return min(1.0, density * 0.4)
 
@@ -122,32 +118,28 @@ class ContextEntropyEngine:
 
     def __init__(self) -> None:
         self._config: Config | None = None
-        self._db: aiosqlite.Connection | None = None
 
     async def init(self, config: Config) -> None:
         self._config = config
-        from context_firewall.db.connection import get_db
-        self._db = await get_db()
         logger.info("ContextEntropyEngine initialized")
 
     def health_check(self) -> SubsystemHealth:
         return SubsystemHealth(name=self.name, healthy=True)
 
     async def shutdown(self) -> None:
-        self._db = None
+        pass
 
     async def get_entropy(self, node_id: str) -> float:
         """Hot-path: O(1) lookup from pre-computed annotations."""
-        if self._db is None:
-            return self._config.entropy.default_score if self._config else 0.30
         try:
-            async with self._db.execute(
+            db = await get_db()
+            async with db.execute(
                 "SELECT entropy_score, stale FROM entropy_annotations WHERE node_id = ?",
                 (node_id,),
             ) as cursor:
                 row = await cursor.fetchone()
             if row is None:
-                return self._config.entropy.default_score if self._config else 0.30
+                return 0.30
             score = float(row["entropy_score"])
             if row["stale"]:
                 score = min(1.0, score + 0.15)
@@ -165,7 +157,6 @@ class ContextEntropyEngine:
         for ext in exts:
             files.extend(root.rglob(ext))
 
-        # Load contents once so we can do cross-file duplication comparisons
         contents: list[tuple[str, str]] = []
         for file_path in files:
             try:
@@ -177,7 +168,6 @@ class ContextEntropyEngine:
 
         for i, (rel_path, content) in enumerate(contents):
             try:
-                # Use adjacent file for duplication comparison (avoids O(N^2) over all files)
                 sibling_content = contents[i - 1][1] if i > 0 else ""
                 annotation = await self._analyze_file(rel_path, content, sibling_content)
                 await self._persist(annotation)
@@ -245,9 +235,8 @@ class ContextEntropyEngine:
         )
 
     async def _persist(self, annotation: EntropyAnnotation) -> None:
-        if self._db is None:
-            return
-        await self._db.execute(
+        db = await get_db()
+        await db.execute(
             """
             INSERT INTO entropy_annotations
                 (node_id, file_path, entropy_score, signals, reasons, computed_at, stale)
@@ -268,4 +257,4 @@ class ContextEntropyEngine:
                 annotation.computed_at.isoformat(),
             ),
         )
-        await self._db.commit()
+        await db.commit()

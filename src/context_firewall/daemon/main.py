@@ -204,7 +204,6 @@ async def run_daemon(config: Config, host: str = "0.0.0.0") -> None:
     from context_firewall.source.registry import SourceRegistry
     from context_firewall.source.types import SourceTrustTier
     source_registry = SourceRegistry(
-        db_path,
         classification_frameworks=config.compliance.classification_frameworks,
     )
     await source_registry.init()
@@ -400,7 +399,7 @@ def _setup_jobs(scheduler: AsyncIOScheduler, config: Config, engines: dict) -> N
         scheduler.add_job(
             analytics.compute_and_store_snapshots,
             "cron",
-            **_parse_cron(config.daemon.jobs.get("entropy_computation", None)),
+            minute="0", hour="*/6",
             id="analytics_snapshots",
             replace_existing=True,
         )
@@ -412,7 +411,7 @@ def _setup_jobs(scheduler: AsyncIOScheduler, config: Config, engines: dict) -> N
         scheduler.add_job(
             _run_entropy,
             "cron",
-            **_parse_cron(config.daemon.jobs.get("entropy_computation", None)),
+            minute="0", hour="*/6",
             id="entropy_computation",
             replace_existing=True,
         )
@@ -431,23 +430,6 @@ def _setup_jobs(scheduler: AsyncIOScheduler, config: Config, engines: dict) -> N
             replace_existing=True,
         )
 
-
-def _parse_cron(job_cfg) -> dict:
-    """Convert cron string like '0 */6 * * *' to APScheduler kwargs."""
-    if job_cfg is None:
-        return {"minute": "0", "hour": "*/6"}
-    cron_str = getattr(job_cfg, "schedule", "0 */6 * * *")
-    parts = cron_str.split()
-    if len(parts) == 5:
-        minute, hour, day, month, day_of_week = parts
-        return {
-            "minute": minute,
-            "hour": hour,
-            "day": day,
-            "month": month,
-            "day_of_week": day_of_week,
-        }
-    return {"minute": "0", "hour": "*/6"}
 
 
 def main():

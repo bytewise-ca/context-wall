@@ -23,35 +23,152 @@ from typing import TYPE_CHECKING, Any, Callable
 
 import httpx
 from prometheus_client import REGISTRY
+from pydantic import BaseModel
 
 from context_firewall.config import ControlPlaneConfig, Config
-from context_firewall.control_plane.client import ControlPlaneClient
-from context_firewall.control_plane.models import (
-    HeartbeatPayload,
-    RegisterPayload,
-    TelemetryBatch,
-    TelemetryMetrics,
-    ViolationEntry,
-)
 
 if TYPE_CHECKING:
     from context_firewall.policy.engine import PolicyEngine
 
 logger = logging.getLogger(__name__)
 
-# Prometheus metric names we track for delta computation
-_PROXY_REQUESTS   = "cre_proxy_requests"
-_PROXY_VIOLATIONS = "cre_proxy_violations"
-_PIPELINE_REQUESTS = "cre_pipeline_requests"
+# ---------------------------------------------------------------------------
+# Wire models - shapes that cross the network boundary (counts/scores, never content)
+# ---------------------------------------------------------------------------
+
+class ViolationEntry(BaseModel):
+    type: str
+    rule: str = ""
+    action: str = ""
+    count: int = 0
+
+
+class TelemetryMetrics(BaseModel):
+    proxy_requests_total: int = 0
+    proxy_blocked_total: int = 0
+    violations: list[ViolationEntry] = []
+    active_sessions: int = 0
+    pipeline_requests_total: int = 0
+    avg_proxy_latency_ms: float | None = None
+
+
+class TelemetryBatch(BaseModel):
+    daemon_id: str
+    period_start: str
+    period_end: str
+    metrics: TelemetryMetrics
+
+
+class HeartbeatPayload(BaseModel):
+    daemon_id: str
+    status: str
+    subsystems: dict[str, dict[str, Any]] = {}
+
+
+class RegisterPayload(BaseModel):
+    daemon_id: str
+    daemon_name: str
+    version: str = ""
+    engines: list[str] = []
+    config_hash: str = ""
+    capabilities: list[str] = ["telemetry_push", "policy_pull"]
+
+
+class RegisterResponse(BaseModel):
+    daemon_token: str
+    policy_version: str = "v0"
+    push_url: str = ""
+    heartbeat_url: str = ""
+    events_url: str = ""
+    policies_url: str = ""
+
+
+# ---------------------------------------------------------------------------
+# HTTP client
+# ---------------------------------------------------------------------------
+
+_TIMEOUT = httpx.Timeout(10.0, connect=5.0)
+
+
+class _ControlPlaneClient:
+    def __init__(self, base_url: str, org_token: str) -> None:
+        self._base = base_url.rstrip("/")
+        self._org_token = org_token
+        self.daemon_token: str | None = None
+
+    def _org_headers(self) -> dict[str, str]:
+        return {"Authorization": f"Bearer {self._org_token}"}
+
+    def _daemon_headers(self) -> dict[str, str]:
+        if not self.daemon_token:
+            raise RuntimeError("Not registered - call register() first")
+        return {"Authorization": f"Bearer {self.daemon_token}"}
+
+    async def register(self, payload: RegisterPayload) -> RegisterResponse | None:
+        try:
+            async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
+                resp = await client.post(
+                    f"{self._base}/api/v1/daemon/register",
+                    headers=self._org_headers(),
+                    json=payload.model_dump(),
+                )
+                resp.raise_for_status()
+                result = RegisterResponse(**resp.json())
+                self.daemon_token = result.daemon_token
+                logger.info("Registered with control plane, policy_version=%s", result.policy_version)
+                return result
+        except Exception as exc:
+            logger.warning("Control plane registration failed (non-fatal): %s", exc)
+            return None
+
+    async def push_telemetry(self, batch: TelemetryBatch) -> bool:
+        try:
+            async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
+                resp = await client.post(
+                    f"{self._base}/api/v1/daemon/telemetry",
+                    headers=self._daemon_headers(),
+                    json=batch.model_dump(),
+                )
+                resp.raise_for_status()
+                return True
+        except RuntimeError:
+            return False
+        except Exception as exc:
+            logger.debug("Telemetry push failed (non-fatal): %s", exc)
+            return False
+
+    async def push_heartbeat(self, payload: HeartbeatPayload) -> str | None:
+        try:
+            async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
+                resp = await client.post(
+                    f"{self._base}/api/v1/daemon/heartbeat",
+                    headers=self._daemon_headers(),
+                    json=payload.model_dump(),
+                )
+                resp.raise_for_status()
+                return resp.json().get("policy_version")
+        except RuntimeError:
+            return None
+        except Exception as exc:
+            logger.debug("Heartbeat push failed (non-fatal): %s", exc)
+            return None
+
+
+# ---------------------------------------------------------------------------
+# Prometheus helpers
+# ---------------------------------------------------------------------------
+
+_PROXY_REQUESTS      = "cre_proxy_requests"
+_PROXY_VIOLATIONS    = "cre_proxy_violations"
+_PIPELINE_REQUESTS   = "cre_pipeline_requests"
 _POLICY_ENFORCEMENTS = "cre_policy_enforcements"
-_ACTIVE_SESSIONS  = "cre_active_sessions"
-_PROXY_DURATION   = "cre_proxy_request_duration_seconds"
+_ACTIVE_SESSIONS     = "cre_active_sessions"
+_PROXY_DURATION      = "cre_proxy_request_duration_seconds"
 
 HealthProvider = Callable[[], dict[str, dict[str, Any]]]
 
 
 def _load_or_create_daemon_id(state_dir: str) -> str:
-    """Stable daemon ID persisted across restarts."""
     path = Path(state_dir) / "daemon_id"
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists():
@@ -64,31 +181,24 @@ def _load_or_create_daemon_id(state_dir: str) -> str:
 def _config_hash(config: Config) -> str:
     import yaml, io
     buf = io.StringIO()
-    # Use only stable, non-secret fields
-    relevant = {
+    yaml.dump({
         "detection": config.detection.model_dump(),
         "enforcement": config.enforcement.model_dump(),
         "policy": config.policy.model_dump(),
-    }
-    yaml.dump(relevant, buf)
+    }, buf)
     return hashlib.sha256(buf.getvalue().encode()).hexdigest()[:16]
 
 
 def _collect_counter_samples() -> dict[str, dict[tuple, float]]:
-    """Snapshot all tracked counter values from the Prometheus registry."""
     result: dict[str, dict[tuple, float]] = {}
-    for metric_family in REGISTRY.collect():
-        name = metric_family.name
-        if name not in (
-            _PROXY_REQUESTS, _PROXY_VIOLATIONS, _PIPELINE_REQUESTS, _POLICY_ENFORCEMENTS
-        ):
+    for mf in REGISTRY.collect():
+        if mf.name not in (_PROXY_REQUESTS, _PROXY_VIOLATIONS, _PIPELINE_REQUESTS, _POLICY_ENFORCEMENTS):
             continue
-        result[name] = {}
-        for sample in metric_family.samples:
+        result[mf.name] = {}
+        for sample in mf.samples:
             if not sample.name.endswith("_total"):
                 continue
-            key = tuple(sorted(sample.labels.items()))
-            result[name][key] = sample.value
+            result[mf.name][tuple(sorted(sample.labels.items()))] = sample.value
     return result
 
 
@@ -101,9 +211,7 @@ def _collect_gauge(metric_name: str) -> float:
 
 
 def _collect_histogram_mean(metric_name: str) -> float | None:
-    """Return mean latency in ms from a Histogram (sum/count)."""
-    total_sum = 0.0
-    total_count = 0.0
+    total_sum = total_count = 0.0
     found = False
     for mf in REGISTRY.collect():
         if mf.name == metric_name:
@@ -115,31 +223,30 @@ def _collect_histogram_mean(metric_name: str) -> float | None:
                     total_count += sample.value
     if not found or total_count == 0:
         return None
-    return (total_sum / total_count) * 1000  # convert seconds → ms
+    return (total_sum / total_count) * 1000
 
 
 def _compute_delta(
     current: dict[str, dict[tuple, float]],
     previous: dict[str, dict[tuple, float]],
 ) -> dict[str, dict[tuple, float]]:
-    delta: dict[str, dict[tuple, float]] = {}
-    for name, samples in current.items():
-        delta[name] = {}
-        prev_samples = previous.get(name, {})
-        for key, value in samples.items():
-            delta[name][key] = max(0.0, value - prev_samples.get(key, 0.0))
-    return delta
+    return {
+        name: {k: max(0.0, v - previous.get(name, {}).get(k, 0.0)) for k, v in samples.items()}
+        for name, samples in current.items()
+    }
 
 
 def _delta_label(samples: dict[tuple, float], label_key: str) -> dict[str, float]:
-    """Flatten a label dimension into name → count dict."""
     result: dict[str, float] = {}
     for key_tuple, count in samples.items():
-        labels = dict(key_tuple)
-        label_val = labels.get(label_key, "unknown")
+        label_val = dict(key_tuple).get(label_key, "unknown")
         result[label_val] = result.get(label_val, 0.0) + count
     return result
 
+
+# ---------------------------------------------------------------------------
+# Pusher
+# ---------------------------------------------------------------------------
 
 class ControlPlanePusher:
     def __init__(
@@ -156,12 +263,9 @@ class ControlPlanePusher:
 
         state_dir = str(Path(config.storage.db_path).parent)
         self._daemon_id = _load_or_create_daemon_id(state_dir)
-
-        self._client = ControlPlaneClient(cp_config.url, cp_config.registration_token)
+        self._client = _ControlPlaneClient(cp_config.url, cp_config.registration_token)
         self._registered = False
         self._last_samples: dict[str, dict[tuple, float]] = {}
-        self._last_duration_sum = 0.0
-        self._last_duration_count = 0.0
         self._tasks: list[asyncio.Task] = []
         self._local_policy_version: str = "v0"
         self._policies_url: str = ""
@@ -175,7 +279,6 @@ class ControlPlanePusher:
             logger.info("Control plane not configured - running in local-only mode")
             return
 
-        # Register (retry up to 3 times with backoff)
         for attempt in range(3):
             result = await self._client.register(self._build_register_payload())
             if result:
@@ -201,20 +304,17 @@ class ControlPlanePusher:
             await asyncio.gather(*self._tasks, return_exceptions=True)
 
     def _build_register_payload(self) -> RegisterPayload:
-        engines = ["policy", "graph", "provenance", "proxy", "analytics", "trust"]
         return RegisterPayload(
             daemon_id=self._daemon_id,
             daemon_name=self._cp.daemon_name or self._daemon_id,
             version="0.1.0",
-            engines=engines,
+            engines=["policy", "graph", "provenance", "proxy", "analytics", "trust"],
             config_hash=_config_hash(self._config),
         )
 
     async def _telemetry_loop(self) -> None:
-        # Seed baseline on first tick - don't push a spike of "all counters since boot"
         self._last_samples = _collect_counter_samples()
         await asyncio.sleep(self._cp.push_interval_seconds)
-
         while True:
             try:
                 if not self._registered:
@@ -224,7 +324,6 @@ class ControlPlanePusher:
                     else:
                         await asyncio.sleep(self._cp.push_interval_seconds)
                         continue
-
                 await self._push_telemetry()
             except asyncio.CancelledError:
                 raise
@@ -252,21 +351,16 @@ class ControlPlanePusher:
             await asyncio.sleep(self._cp.heartbeat_interval_seconds)
 
     async def _pull_policies(self) -> None:
-        if not self._policy_engine or not self._policies_url:
+        if not self._policy_engine or not self._policies_url or not self._client.daemon_token:
             return
         try:
-            daemon_token = self._client._daemon_token
-            if not daemon_token:
-                return
-            timeout = httpx.Timeout(10.0, connect=5.0)
-            async with httpx.AsyncClient(timeout=timeout) as client:
+            async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
                 resp = await client.get(
                     self._policies_url,
-                    headers={"Authorization": f"Bearer {daemon_token}"},
+                    headers={"Authorization": f"Bearer {self._client.daemon_token}"},
                 )
                 resp.raise_for_status()
-                data = resp.json()
-            rules: list[dict] = data.get("rules", [])
+                rules: list[dict] = resp.json().get("rules", [])
             await self._policy_engine.load_control_plane_rules(rules)
             logger.info("Applied %d rules from control plane", len(rules))
         except Exception as exc:
@@ -283,54 +377,28 @@ class ControlPlanePusher:
         delta = _compute_delta(current, self._last_samples)
         self._last_samples = current
 
-        # Proxy request counts - split by result (allowed/blocked)
         proxy_by_result = _delta_label(delta.get(_PROXY_REQUESTS, {}), "result")
         proxy_total   = int(sum(proxy_by_result.values()))
         proxy_blocked = int(proxy_by_result.get("blocked", 0))
 
-        # Pipeline requests
-        pipeline_by_status = _delta_label(delta.get(_PIPELINE_REQUESTS, {}), "status")
-        pipeline_total = int(sum(pipeline_by_status.values()))
+        pipeline_total = int(sum(_delta_label(delta.get(_PIPELINE_REQUESTS, {}), "status").values()))
 
-        # Violation types from proxy scanner
         violation_by_type = _delta_label(delta.get(_PROXY_VIOLATIONS, {}), "violation_type")
-
-        # Policy enforcement breakdown - keyed by (action, rule_name)
         policy_delta = delta.get(_POLICY_ENFORCEMENTS, {})
+
+        violations: list[ViolationEntry] = [
+            ViolationEntry(type=vtype, rule="proxy_scanner", action="block", count=int(count))
+            for vtype, count in violation_by_type.items() if count > 0
+        ]
         policy_by_rule: dict[tuple[str, str], int] = {}
         for key_tuple, count in policy_delta.items():
             labels = dict(key_tuple)
-            action    = labels.get("action", "unknown")
-            rule_name = labels.get("rule_name", "unknown")
-            k = (action, rule_name)
+            k = (labels.get("action", "unknown"), labels.get("rule_name", "unknown"))
             policy_by_rule[k] = policy_by_rule.get(k, 0) + int(count)
-
-        # Merge policy enforcements into violation entries
-        # Violations from the proxy scanner take precedence; policy enforcements
-        # add "other" category entries not already captured as a violation_type.
-        violations: list[ViolationEntry] = []
-        for vtype, count in violation_by_type.items():
-            if count > 0:
-                violations.append(ViolationEntry(
-                    type=vtype,
-                    rule="proxy_scanner",
-                    action="block",
-                    count=int(count),
-                ))
-        for (action, rule_name), count in policy_by_rule.items():
-            if count > 0:
-                violations.append(ViolationEntry(
-                    type="policy_enforcement",
-                    rule=rule_name,
-                    action=action,
-                    count=count,
-                ))
-
-        # Average proxy latency (from histogram)
-        avg_latency_ms = _collect_histogram_mean(_PROXY_DURATION)
-
-        # Active sessions (gauge - current value)
-        active_sessions = int(_collect_gauge(_ACTIVE_SESSIONS))
+        violations += [
+            ViolationEntry(type="policy_enforcement", rule=rule_name, action=action, count=count)
+            for (action, rule_name), count in policy_by_rule.items() if count > 0
+        ]
 
         batch = TelemetryBatch(
             daemon_id=self._daemon_id,
@@ -340,9 +408,9 @@ class ControlPlanePusher:
                 proxy_requests_total=proxy_total,
                 proxy_blocked_total=proxy_blocked,
                 violations=violations,
-                active_sessions=active_sessions,
+                active_sessions=int(_collect_gauge(_ACTIVE_SESSIONS)),
                 pipeline_requests_total=pipeline_total,
-                avg_proxy_latency_ms=avg_latency_ms,
+                avg_proxy_latency_ms=_collect_histogram_mean(_PROXY_DURATION),
             ),
         )
 
@@ -361,14 +429,8 @@ class ControlPlanePusher:
             except Exception:
                 pass
 
-        # Derive overall status from subsystems
         statuses = [v.get("status", "unknown") for v in subsystems.values()]
-        if all(s == "healthy" for s in statuses) or not statuses:
-            overall = "healthy"
-        elif any(s == "down" for s in statuses):
-            overall = "degraded"
-        else:
-            overall = "degraded"
+        overall = "healthy" if (all(s == "healthy" for s in statuses) or not statuses) else "degraded"
 
         return await self._client.push_heartbeat(HeartbeatPayload(
             daemon_id=self._daemon_id,

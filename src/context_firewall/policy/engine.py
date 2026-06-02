@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -14,32 +13,13 @@ import yaml
 from context_firewall.config import Config
 from context_firewall.models import RankedSlice, SubsystemHealth
 from context_firewall.policy.detectors.injection import detect_injection, BLOCK_THRESHOLD, WARN_THRESHOLD
+from context_firewall.policy.detectors.patterns import SECRET_PATTERNS, PII_PATTERNS
 from context_firewall.source.types import SourceTrustTier
 
 if TYPE_CHECKING:
     from context_firewall.provenance.engine import ProvenanceEngine
 
 logger = logging.getLogger(__name__)
-
-_BUILTIN_SECRET_PATTERNS: list[tuple[str, re.Pattern]] = [
-    ("aws_access_key", re.compile(r"AKIA[0-9A-Z]{16}")),
-    ("generic_api_key", re.compile(r"(?i)(api_key|apikey|api-key)\s*[:=]\s*[\"']?[A-Za-z0-9_\-]{20,}[\"']?")),
-    ("generic_password", re.compile(r"(?i)(password|passwd|pwd)\s*[:=]\s*[\"'][^\"']{8,}[\"']")),
-    ("private_key", re.compile(r"-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----")),
-    ("bearer_token", re.compile(r"(?i)bearer\s+[A-Za-z0-9\-_\.]{20,}")),
-    ("github_pat", re.compile(r"ghp_[A-Za-z0-9]{36}")),
-    ("openai_key", re.compile(r"sk-[A-Za-z0-9]{48}")),
-]
-
-_BUILTIN_PII_PATTERNS: list[tuple[str, re.Pattern]] = [
-    ("email", re.compile(r"\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Z|a-z]{2,}\b")),
-    ("ssn", re.compile(r"\b\d{3}-\d{2}-\d{4}\b")),
-    ("credit_card", re.compile(r"\b(?:\d[ -]?){13,16}\b")),
-    ("phone_us", re.compile(r"\b\(?\d{3}\)?[-.\s]\d{3}[-.\s]\d{4}\b")),
-]
-
-# _INJECTION_PATTERNS removed - injection detection now handled by
-# context_firewall.policy.detectors.injection (multi-layer: structural + regex + heuristic)
 
 
 class PolicyRule:
@@ -75,7 +55,7 @@ class PolicyRule:
             return False, "", ""
 
         if self.detector == "secret":
-            for name, pattern in _BUILTIN_SECRET_PATTERNS:
+            for name, pattern in SECRET_PATTERNS:
                 if pattern.search(text):
                     return True, name, ""
             for pattern in self._compiled_custom:
@@ -83,7 +63,7 @@ class PolicyRule:
                     return True, "custom_secret", ""
 
         elif self.detector == "pii":
-            for name, pattern in _BUILTIN_PII_PATTERNS:
+            for name, pattern in PII_PATTERNS:
                 if pattern.search(text):
                     return True, name, ""
 
@@ -178,7 +158,6 @@ class PolicyEngine:
         self._config: Config | None = None
         self._watcher = None
         self._provenance: ProvenanceEngine | None = None
-        self._dsl_cache = None  # PolicyStackCache, loaded lazily
 
     async def init(self, config: Config, provenance: ProvenanceEngine | None = None) -> None:
         global _compiled_policy
@@ -191,13 +170,6 @@ class PolicyEngine:
                 _compiled_policy = _parse_policy_dir(policy_dir)
             else:
                 _compiled_policy = _load_default_policy()
-
-        # Boot four-layer DSL stack cache if directory structure exists
-        dsl_base = policy_dir
-        if dsl_base.exists():
-            from context_firewall.policy.dsl.loader import PolicyStackCache
-            self._dsl_cache = PolicyStackCache(dsl_base)
-            await self._dsl_cache.init()
 
         self._start_watcher(policy_dir)
         logger.info("PolicyEngine initialized", extra={"rules": len(_compiled_policy.rules)})
@@ -279,31 +251,11 @@ class PolicyEngine:
                 "source": "builtin" if r.name.startswith("builtin_") else "config",
                 "compliance_mapping": None,
             })
-        if self._dsl_cache:
-            stack = self._dsl_cache.get()
-            if stack:
-                for r in stack.rules:
-                    cm = None
-                    if r.compliance_mapping:
-                        cm = f"{r.compliance_mapping.framework}: {r.compliance_mapping.control_id}"
-                    rules.append({
-                        "name": r.name,
-                        "scope": r.scope if r.scope else "content",
-                        "detector": r.detector if r.detector else "dsl",
-                        "action": r.action,
-                        "layer": r.layer,
-                        "reason": r.reason,
-                        "path_prefix": r.path_prefix or None,
-                        "source": "dsl",
-                        "compliance_mapping": cm,
-                    })
         return rules
 
     async def shutdown(self) -> None:
         if self._watcher:
             self._watcher.stop()
-        if self._dsl_cache:
-            await self._dsl_cache.shutdown()
 
     async def evaluate(
         self,
@@ -358,17 +310,6 @@ class PolicyEngine:
                 if result.detected:
                     return False, None, True
 
-        # DSL four-layer rules - fleet deny wins, then other layers
-        if self._dsl_cache:
-            stack = self._dsl_cache.get()
-            if stack:
-                result = await self._evaluate_dsl_stack(
-                    candidate, stack, request_id, session_id, block_event
-                )
-                if result is not None:
-                    return result
-
-        # Flat legacy rules (backward compat)
         for rule in policy.rules:
             matched, pattern_name, _ = rule.matches(candidate)
             if not matched:
@@ -387,70 +328,6 @@ class PolicyEngine:
                 return True, redacted, True
 
         return True, candidate, False
-
-    async def _evaluate_dsl_stack(
-        self,
-        candidate: RankedSlice,
-        stack,
-        request_id: str,
-        session_id: str,
-        block_event: asyncio.Event,
-    ):
-        """Evaluate DSL rules in layer order with deny-wins semantics.
-
-        Fleet deny actions are checked first and cannot be overridden by lower layers.
-        Returns a result tuple or None to fall through to flat rules.
-        """
-        from context_firewall.policy.dsl.evaluator import evaluate
-        from context_firewall.policy.dsl.types import EvalContext
-
-        ctx = EvalContext(
-            source_tier=candidate.source_trust_tier.value,
-            trust_score=candidate.trust_score,
-            task_scope="",
-            user_role="",
-            data_classification="",
-            file_path=candidate.file_path,
-            content=candidate.content,
-        )
-
-        # Fleet deny-wins pass: check fleet deny/exclude rules first
-        for rule in stack.fleet_rules:
-            if rule.action not in ("deny", "exclude", "block"):
-                continue
-            if not rule.applies_when.is_empty and not rule.applies_when.matches(ctx):
-                continue  # AppliesWhen pre-filter
-            if not evaluate(rule.condition, ctx):
-                continue
-            await self._emit_dsl_enforcement(request_id, session_id, rule, candidate)
-            if rule.action == "block":
-                block_event.set()
-            return False, None, True
-
-        # Full stack: all layers in order
-        for rule in stack.rules:
-            if rule.action in ("deny", "exclude", "block") and rule.layer == "fleet":
-                continue  # already handled above
-            if not rule.applies_when.is_empty and not rule.applies_when.matches(ctx):
-                continue  # AppliesWhen pre-filter
-            if not evaluate(rule.condition, ctx):
-                continue
-
-            action = rule.action
-            await self._emit_dsl_enforcement(request_id, session_id, rule, candidate)
-
-            if action in ("deny", "exclude"):
-                return False, None, True
-            if action == "block":
-                block_event.set()
-                return False, None, True
-            if action == "redact":
-                redacted = candidate.model_copy(update={"content": "[REDACTED]"})
-                return True, redacted, True
-            if action in ("warn", "audit-only"):
-                continue  # log the event but allow the candidate through
-
-        return None  # no DSL rule matched; fall through to flat rules
 
     async def _emit_injection_detection(
         self,
@@ -503,30 +380,3 @@ class PolicyEngine:
         )
         await self._provenance.emit_policy_enforcement(event)
 
-    async def _emit_dsl_enforcement(
-        self,
-        request_id: str,
-        session_id: str,
-        rule,
-        candidate: RankedSlice,
-    ) -> None:
-        """Emit enforcement event with compliance_mapping passthrough."""
-        if self._provenance is None:
-            return
-        from context_firewall.provenance.models import PolicyEnforcementEvent
-        compliance_note = ""
-        if rule.compliance_mapping:
-            cm = rule.compliance_mapping
-            compliance_note = f" [{cm.framework}: {cm.control_id}]"
-        event = PolicyEnforcementEvent(
-            request_id=request_id,
-            session_id=session_id,
-            rule_name=rule.name,
-            action=rule.action,
-            file_path=candidate.file_path,
-            node_id=candidate.node_id,
-            reason=f"{rule.reason}{compliance_note}",
-            pattern_name=rule.layer,
-            occurred_at=datetime.now(timezone.utc),
-        )
-        await self._provenance.emit_policy_enforcement(event)

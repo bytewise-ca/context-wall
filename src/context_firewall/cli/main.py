@@ -309,7 +309,25 @@ def policy_validate(path):
     Exits 0 on success. Reports errors with context.
     """
     import yaml as _yaml
-    from context_firewall.policy.dsl.evaluator import validate_policy_file
+
+    VALID_ACTIONS = {"exclude", "redact", "block"}
+    VALID_DETECTORS = {"secret", "pii", "injection", "path_prefix", "tag"}
+
+    def _validate_flat_rules(raw: dict) -> list[str]:
+        errors = []
+        for i, rule in enumerate(raw.get("rules", [])):
+            prefix = f"rule[{i}] ({rule.get('name', '<unnamed>')})"
+            if not rule.get("name"):
+                errors.append(f"{prefix}: missing 'name'")
+            action = rule.get("action")
+            if not action:
+                errors.append(f"{prefix}: missing 'action'")
+            elif action not in VALID_ACTIONS:
+                errors.append(f"{prefix}: invalid action '{action}' (must be one of {sorted(VALID_ACTIONS)})")
+            detector = rule.get("detector")
+            if detector and detector not in VALID_DETECTORS:
+                errors.append(f"{prefix}: unknown detector '{detector}' (must be one of {sorted(VALID_DETECTORS)})")
+        return errors
 
     target = Path(path)
     files = list(target.glob("*.yaml")) + list(target.glob("*.yml")) if target.is_dir() else [target]
@@ -318,7 +336,7 @@ def policy_validate(path):
     for f in files:
         try:
             raw = _yaml.safe_load(f.read_text()) or {}
-            errors = validate_policy_file(raw)
+            errors = _validate_flat_rules(raw)
             if errors:
                 click.echo(f"ERRORS in {f}:", err=True)
                 for e in errors:

@@ -50,8 +50,7 @@ class ContextSynthesizer:
         policy_violations: int = 0,
     ) -> TrustedContextBundle:
         t0 = time.monotonic()
-        cfg = self._config.synthesizer if self._config else None
-        budget = self._resolve_budget(ctx.task_type.value, cfg)
+        budget = self._resolve_budget(ctx.task_type.value)
 
         candidates = self._dedup_by_diversity(candidates)
         included, excluded = self._enforce_budget(candidates, budget)
@@ -124,16 +123,12 @@ class ContextSynthesizer:
         )
         return bundle
 
-    def _resolve_budget(self, task_type: str, cfg) -> int:
-        if cfg is None:
-            defaults = {
-                "BUG_FIX": 60_000, "NEW_FEATURE": 80_000, "REFACTOR": 100_000,
-                "SECURITY_REVIEW": 50_000, "DEPENDENCY_AUDIT": 40_000,
-            }
-            base = defaults.get(task_type, 80_000)
-            return base - 500
-        base = cfg.per_task_budgets.get(task_type, cfg.default_budget)
-        return base - cfg.reserve_for_summary
+    def _resolve_budget(self, task_type: str) -> int:
+        budgets = {
+            "BUG_FIX": 60_000, "NEW_FEATURE": 80_000, "REFACTOR": 100_000,
+            "SECURITY_REVIEW": 50_000, "DEPENDENCY_AUDIT": 40_000,
+        }
+        return budgets.get(task_type, 80_000) - 500
 
     def _dedup_by_diversity(
         self, candidates: list[RankedSlice], jaccard_threshold: float = 0.72

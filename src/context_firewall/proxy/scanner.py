@@ -17,6 +17,8 @@ import re
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from context_firewall.policy.detectors.patterns import SECRET_PATTERNS, PII_PATTERNS
+
 if TYPE_CHECKING:
     from context_firewall.source.types import SourceTrustTier
 
@@ -44,25 +46,6 @@ _INJECTION_PATTERNS = [
         r"\[\s*INST\s*\]",
         r"<\|im_start\|>system",
     ]
-]
-
-_SECRET_PATTERNS = [
-    (re.compile(r"sk-(?:proj-|org-)?[a-zA-Z0-9\-]{20,}"), "OpenAI API key"),
-    (re.compile(r"sk-ant-[a-zA-Z0-9\-]{20,}"), "Anthropic API key"),
-    (re.compile(r"ghp_[a-zA-Z0-9]{36}"), "GitHub personal token"),
-    (re.compile(r"ghs_[a-zA-Z0-9]{36}"), "GitHub Actions token"),
-    (re.compile(r"AKIA[0-9A-Z]{16}"), "AWS access key"),
-    (re.compile(r"AIza[0-9A-Za-z\-_]{35}"), "Google API key"),
-    (re.compile(r"(?:password|passwd|pwd)\s*[=:]\s*\S{8,}", re.I), "Hardcoded password"),
-    (re.compile(r"(?:secret|token|api_key|apikey)\s*[=:]\s*['\"][a-zA-Z0-9+/\-_]{16,}['\"]", re.I), "Hardcoded secret"),
-    (re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"), "Private key material"),
-    (re.compile(r"Bearer\s+eyJ[a-zA-Z0-9\-_]+\.[a-zA-Z0-9\-_]+\.[a-zA-Z0-9\-_]+"), "JWT Bearer token"),
-]
-
-_PII_PATTERNS = [
-    (re.compile(r"\b\d{3}-\d{2}-\d{4}\b"), "US SSN"),
-    (re.compile(r"\b(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13}|6(?:011|5[0-9]{2})[0-9]{12})\b"), "Credit card number"),
-    (re.compile(r"\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Z|a-z]{2,}\b"), "Email address"),
 ]
 
 
@@ -157,28 +140,26 @@ def scan_messages(
                     ))
 
             # Secret leakage - always block regardless of tier
-            for pat, label in _SECRET_PATTERNS:
+            for name, pat in SECRET_PATTERNS:
                 m = pat.search(text)
                 if m:
-                    # Skip if it looks like a ContextWall key (we issue those)
-                    matched = m.group(0)
-                    if matched.startswith("sk-cre-"):
+                    if m.group(0).startswith("sk-cre-"):
                         continue
                     violations.append(ScanViolation(
-                        category=f"secret_leakage:{label.lower().replace(' ', '_')}",
-                        pattern=label,
+                        category=f"secret_leakage:{name}",
+                        pattern=name,
                         severity="block",
                         excerpt=_excerpt(text, m),
                     ))
 
             # PII - severity and enablement depend on source trust tier
             if pii_enabled:
-                for pat, label in _PII_PATTERNS:
+                for name, pat in PII_PATTERNS:
                     m = pat.search(text)
                     if m:
                         violations.append(ScanViolation(
-                            category=f"pii:{label.lower().replace(' ', '_')}",
-                            pattern=label,
+                            category=f"pii:{name}",
+                            pattern=name,
                             severity=pii_severity,
                             excerpt="[redacted]",
                         ))

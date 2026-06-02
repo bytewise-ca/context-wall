@@ -10,6 +10,7 @@ from typing import Any
 
 import aiosqlite
 
+from context_firewall.db.connection import get_db
 from context_firewall.source.types import SourceTrustTier
 
 logger = logging.getLogger(__name__)
@@ -73,38 +74,38 @@ class Source:
 class SourceRegistry:
     def __init__(
         self,
-        db_path: str,
         classification_frameworks: dict[str, list[str]] | None = None,
     ) -> None:
-        self._db_path = db_path
         self._cache: dict[str, Source] = {}
         self._classification_frameworks = (
             classification_frameworks or _DEFAULT_CLASSIFICATION_FRAMEWORKS
         )
 
     async def init(self) -> None:
-        async with aiosqlite.connect(self._db_path) as db:
-            await db.execute("""
-                CREATE TABLE IF NOT EXISTS sources (
-                    id                  TEXT PRIMARY KEY,
-                    type                TEXT NOT NULL DEFAULT 'unknown',
-                    trust_tier          TEXT NOT NULL DEFAULT 'untrusted',
-                    owner               TEXT NOT NULL DEFAULT '',
-                    region              TEXT NOT NULL DEFAULT '',
-                    data_classification TEXT NOT NULL DEFAULT '',
-                    created_at          DATETIME NOT NULL,
-                    updated_at          DATETIME NOT NULL,
-                    config              TEXT NOT NULL DEFAULT '{}',
-                    deleted_at          DATETIME
-                )
-            """)
-            await self._migrate(db)
-            # Index for tier lookups by type (complements PK on id)
-            await db.execute(
-                "CREATE INDEX IF NOT EXISTS idx_sources_tier ON sources(trust_tier) WHERE deleted_at IS NULL"
+        db = await get_db()
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS sources (
+                id                  TEXT PRIMARY KEY,
+                type                TEXT NOT NULL DEFAULT 'unknown',
+                trust_tier          TEXT NOT NULL DEFAULT 'untrusted',
+                owner               TEXT NOT NULL DEFAULT '',
+                region              TEXT NOT NULL DEFAULT '',
+                data_classification TEXT NOT NULL DEFAULT '',
+                created_at          DATETIME NOT NULL,
+                updated_at          DATETIME NOT NULL,
+                config              TEXT NOT NULL DEFAULT '{}',
+                deleted_at          DATETIME
             )
-            await db.commit()
-        await self._warm_cache()
+        """)
+        await self._migrate(db)
+        await db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_sources_tier ON sources(trust_tier) WHERE deleted_at IS NULL"
+        )
+        await db.commit()
+
+        async with db.execute("SELECT * FROM sources WHERE deleted_at IS NULL") as cur:
+            rows = await cur.fetchall()
+        self._cache = {row["id"]: _row_to_source(row) for row in rows}
 
     async def _migrate(self, db: aiosqlite.Connection) -> None:
         """Add any columns introduced after initial schema."""
@@ -114,7 +115,6 @@ class SourceRegistry:
                 existing.add(row[1])
 
         new_cols = {
-            # migration 2 used column name "source_type"; all code uses "type"
             "type": "TEXT NOT NULL DEFAULT 'unknown'",
             "owner": "TEXT NOT NULL DEFAULT ''",
             "region": "TEXT NOT NULL DEFAULT ''",
@@ -127,15 +127,6 @@ class SourceRegistry:
             if col not in existing:
                 await db.execute(f"ALTER TABLE sources ADD COLUMN {col} {definition}")
                 logger.info("sources migration: added column %s", col)
-
-    async def _warm_cache(self) -> None:
-        async with aiosqlite.connect(self._db_path) as db:
-            db.row_factory = aiosqlite.Row
-            async with db.execute(
-                "SELECT * FROM sources WHERE deleted_at IS NULL"
-            ) as cur:
-                rows = await cur.fetchall()
-        self._cache = {row["id"]: _row_to_source(row) for row in rows}
 
     def get_trust_tier(self, source_id: str) -> SourceTrustTier:
         """Hot-path O(1) lookup - always served from in-memory cache."""
@@ -162,28 +153,27 @@ class SourceRegistry:
         config: dict[str, Any] | None = None,
     ) -> Source:
         now = datetime.now(timezone.utc)
-        config_json = json.dumps(config or {})
-        async with aiosqlite.connect(self._db_path) as db:
-            await db.execute(
-                """
-                INSERT INTO sources
-                    (id, type, trust_tier, owner, region, data_classification,
-                     created_at, updated_at, config)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(id) DO UPDATE SET
-                    type                = excluded.type,
-                    trust_tier          = excluded.trust_tier,
-                    owner               = excluded.owner,
-                    region              = excluded.region,
-                    data_classification = excluded.data_classification,
-                    updated_at          = excluded.updated_at,
-                    config              = excluded.config,
-                    deleted_at          = NULL
-                """,
-                (source_id, source_type, trust_tier.value, owner, region, data_classification,
-                 now.isoformat(), now.isoformat(), config_json),
-            )
-            await db.commit()
+        db = await get_db()
+        await db.execute(
+            """
+            INSERT INTO sources
+                (id, type, trust_tier, owner, region, data_classification,
+                 created_at, updated_at, config)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                type                = excluded.type,
+                trust_tier          = excluded.trust_tier,
+                owner               = excluded.owner,
+                region              = excluded.region,
+                data_classification = excluded.data_classification,
+                updated_at          = excluded.updated_at,
+                config              = excluded.config,
+                deleted_at          = NULL
+            """,
+            (source_id, source_type, trust_tier.value, owner, region, data_classification,
+             now.isoformat(), now.isoformat(), json.dumps(config or {})),
+        )
+        await db.commit()
 
         source = Source(
             id=source_id, type=source_type, trust_tier=trust_tier,
@@ -198,12 +188,11 @@ class SourceRegistry:
         source = self._cache.get(source_id)
         if source is not None:
             return source
-        async with aiosqlite.connect(self._db_path) as db:
-            db.row_factory = aiosqlite.Row
-            async with db.execute(
-                "SELECT * FROM sources WHERE id = ? AND deleted_at IS NULL", (source_id,)
-            ) as cur:
-                row = await cur.fetchone()
+        db = await get_db()
+        async with db.execute(
+            "SELECT * FROM sources WHERE id = ? AND deleted_at IS NULL", (source_id,)
+        ) as cur:
+            row = await cur.fetchone()
         return _row_to_source(row) if row else None
 
     async def list_sources(self) -> list[Source]:
@@ -247,9 +236,9 @@ class SourceRegistry:
 
         set_clause = ", ".join(f"{k} = ?" for k in updates)
         values = list(updates.values()) + [source_id]
-        async with aiosqlite.connect(self._db_path) as db:
-            await db.execute(f"UPDATE sources SET {set_clause} WHERE id = ?", values)
-            await db.commit()
+        db = await get_db()
+        await db.execute(f"UPDATE sources SET {set_clause} WHERE id = ?", values)
+        await db.commit()
 
         self._cache[source_id] = source
         return source
@@ -257,17 +246,16 @@ class SourceRegistry:
     async def remove(self, source_id: str) -> bool:
         """Soft delete: sets deleted_at timestamp, removes from cache."""
         now = datetime.now(timezone.utc)
-        async with aiosqlite.connect(self._db_path) as db:
-            cur = await db.execute(
-                "UPDATE sources SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL",
-                (now.isoformat(), source_id),
-            )
-            await db.commit()
-            affected = cur.rowcount
-        if affected:
+        db = await get_db()
+        cur = await db.execute(
+            "UPDATE sources SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL",
+            (now.isoformat(), source_id),
+        )
+        await db.commit()
+        if cur.rowcount:
             self._cache.pop(source_id, None)
             logger.info("source soft-deleted id=%s", source_id)
-        return bool(affected)
+        return bool(cur.rowcount)
 
     async def auto_register_repo_sources(self, repo_roots: list[str]) -> int:
         """Idempotently register code repository paths as internal sources."""
