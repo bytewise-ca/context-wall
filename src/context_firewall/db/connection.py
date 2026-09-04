@@ -5,7 +5,7 @@ from __future__ import annotations
 import aiosqlite
 
 _db: aiosqlite.Connection | None = None
-_db_path: str = ".ctxfw/cre.db"
+_db_path: str = ".ctxfw/contextwall.db"
 
 
 async def get_db() -> aiosqlite.Connection:

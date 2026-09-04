@@ -488,7 +488,7 @@ def init_cmd(force):
         "  max_nodes: 50\n"
         "  trust_cutoff: 0.30\n\n"
         "storage:\n"
-        "  db_path: .ctxfw/cre.db\n\n"
+        "  db_path: .ctxfw/contextwall.db\n\n"
         "# Compliance configuration (Phase 2)\n"
         "# compliance_hmac_key: change-this-to-a-random-secret\n"
         "# compliance_baa_mode: false   # set true for HIPAA BAA deployments\n"
@@ -527,5 +527,13 @@ def init_cmd(force):
     click.echo("ContextWall initialized.")
     click.echo("  Config: ctxfw.yaml")
     click.echo("  Policy: .ctxfw/policies/default.yaml")
-    click.echo("  Database: .ctxfw/cre.db (created on first run)")
+    click.echo("  Database: .ctxfw/contextwall.db (created on first run)")
     click.echo("\nStart the daemon with: ctxfwd")
+
+
+# ── Preflight subcommand ──────────────────────────────────────────────────────
+# Registered at import time so `ctxfw check --openai <url>` is discoverable
+# via `ctxfw --help`.
+from context_firewall.preflight.cli import check_cmd  # noqa: E402
+
+cli.add_command(check_cmd)

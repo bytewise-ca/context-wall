@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+import warnings
 from pathlib import Path
 from typing import Any
 
@@ -84,9 +85,9 @@ class ProvenanceConfig(BaseModel):
 
 
 class StorageConfig(BaseModel):
-    db_path: str = ".ctxfw/cre.db"
+    db_path: str = ".ctxfw/contextwall.db"
     object_storage_bucket: str = ""
-    object_storage_prefix: str = "cre-provenance/"
+    object_storage_prefix: str = "contextwall-provenance/"
 
 
 class DaemonConfig(BaseModel):
@@ -109,10 +110,29 @@ class ControlPlaneConfig(BaseModel):
 
 
 def _expand_env_vars(text: str) -> str:
-    """Expand ${VAR:-default} and ${VAR} patterns using os.environ."""
+    """Expand ${VAR:-default} and ${VAR} patterns using os.environ.
+
+    Reads deprecated CRE_-prefixed env vars as a fallback when the caller
+    asks for a CONTEXTWALL_-prefixed one that isn't set. Emits a
+    DeprecationWarning on the fallback path. Remove in v0.3.
+    """
     def _replace(m: re.Match) -> str:
         var, _, default = m.group(1).partition(":-")
-        return os.environ.get(var, default)
+        val = os.environ.get(var)
+        if val is not None:
+            return val
+        if var.startswith("CONTEXTWALL_"):
+            legacy = "CRE_" + var[len("CONTEXTWALL_"):]
+            legacy_val = os.environ.get(legacy)
+            if legacy_val is not None:
+                warnings.warn(
+                    f"{legacy} is deprecated; use {var} instead. "
+                    "Support for the legacy name will be removed in v0.3.",
+                    DeprecationWarning,
+                    stacklevel=3,
+                )
+                return legacy_val
+        return default
     return re.sub(r"\$\{([^}]+)\}", _replace, text)
 
 

@@ -294,7 +294,7 @@ def create_proxy_router(token_store: TokenStore, engines: dict[str, Any]) -> API
             return {
                 "type": "error",
                 "error": {
-                    "type": "cre_policy_violation",
+                    "type": "contextwall_policy_violation",
                     "message": f"ContextWall blocked: {scan.blocked_reason}",
                     "violations": scan.violation_names,
                 },
@@ -303,7 +303,7 @@ def create_proxy_router(token_store: TokenStore, engines: dict[str, Any]) -> API
         return {
             "error": {
                 "message": f"ContextWall blocked: {scan.blocked_reason}",
-                "type": "cre_policy_violation",
+                "type": "contextwall_policy_violation",
                 "code": "content_policy_violation",
                 "violations": scan.violation_names,
             }

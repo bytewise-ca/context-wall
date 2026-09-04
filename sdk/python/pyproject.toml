@@ -4,26 +4,29 @@ build-backend = "hatchling.build"
 
 [project]
 name = "contextwall-sdk"
-version = "0.1.3"
-description = "ContextWall SDK - drop-in context firewall enforcement for any LLM"
+version = "0.2.0"
+description = "DEPRECATED — the ContextWall SDK now ships inside `contextwall`. This package is a thin shim that installs the main package and re-exports from `context_firewall.sdk`. Migrate to `pip install \"contextwall[all]\"`."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
 authors = [
-    { name = "Context Firewall", email = "sumesh.punakkal@gmail.com" },
+    { name = "ContextWall", email = "info@bytewise.ca" },
 ]
-keywords = ["ai", "security", "context-firewall", "anthropic", "openai", "governance"]
+keywords = ["deprecated", "shim", "contextwall"]
 
+# Bring the real implementation in, plus both provider SDKs — matches the
+# old contextwall-sdk[all] behavior so pinned installs keep working.
 dependencies = [
-    "httpx>=0.27",
-    "pydantic>=2.0",
+    "contextwall>=0.2.0",
+    "anthropic>=0.25",
+    "openai>=1.0",
 ]
 
 [project.optional-dependencies]
-anthropic = ["anthropic>=0.25"]
-openai = ["openai>=1.0"]
-all = ["anthropic>=0.25", "openai>=1.0"]
-dev = ["pytest>=8.0", "pytest-asyncio>=0.24", "anthropic>=0.25", "openai>=1.0", "httpx>=0.27"]
+# Kept for backward compatibility; extras now come from contextwall[*].
+anthropic = ["contextwall[anthropic]>=0.2.0"]
+openai = ["contextwall[openai]>=0.2.0"]
+all = ["contextwall[all]>=0.2.0"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/contextwall_sdk"]

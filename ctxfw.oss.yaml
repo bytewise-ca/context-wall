@@ -39,7 +39,7 @@ compliance:
 # Get a registration token from https://app.contextwall.io → Settings.
 control_plane:
   url: ""
-  registration_token: "${CRE_CONTROL_PLANE_TOKEN:-}"
+  registration_token: "${CONTEXTWALL_CONTROL_PLANE_TOKEN:-}"
   daemon_name: "oss-daemon"
   push_interval_seconds: 60
   heartbeat_interval_seconds: 30
@@ -58,11 +58,11 @@ graph:
   trust_cutoff: 0.30
 
 storage:
-  db_path: /app/.ctxfw/cre.db
+  db_path: /app/.ctxfw/contextwall.db
 
 policy:
   policy_dir: /app/.ctxfw/policies
 
 daemon:
-  pid_file: /app/.ctxfw/cre.pid
+  pid_file: /app/.ctxfw/daemon.pid
   jobs: {}

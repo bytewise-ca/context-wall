@@ -1,48 +1,30 @@
-# contextwall-sdk
+# contextwall-sdk (deprecated shim)
 
-Drop-in context firewall enforcement for any LLM. Routes calls through a local [ContextWall](https://contextwall.io) daemon, enforcing your policy before content reaches the model.
+**As of ContextWall 0.2.0, the SDK ships inside the main [`contextwall`](https://pypi.org/project/contextwall/) package.**
 
-Built-in wrappers for Anthropic and OpenAI. Any OpenAI-compatible API (Mistral, Groq, Together, Ollama, etc.) works via `SafeOpenAI`. For other providers, use the zero-code proxy mode.
+This `contextwall-sdk` package is a thin deprecation shim that:
 
-## Install
+- Installs `contextwall>=0.2.0` (the main package)
+- Re-exports everything from `context_firewall.sdk`
+- Emits a `DeprecationWarning` on import so you know to migrate
 
-```bash
-pip install 'contextwall-sdk[anthropic]'   # Anthropic
-pip install 'contextwall-sdk[openai]'      # OpenAI + any OpenAI-compatible API
-pip install 'contextwall-sdk[all]'         # both
+The shim will be removed in v0.4.
+
+## Migrate
+
+```diff
+- pip install contextwall-sdk[all]
++ pip install "contextwall[all]"
 ```
 
-## Usage
-
-**Anthropic:**
-```python
-from contextwall_sdk import SafeAnthropic, ContextWallBlockedError
-
-client = SafeAnthropic(api_key="sk-ant-...", ctxfw_url="http://localhost:8080")
-# use exactly like the standard Anthropic client
+```diff
+- from contextwall_sdk import SafeAnthropic
++ from context_firewall.sdk import SafeAnthropic
 ```
 
-**OpenAI / any OpenAI-compatible API:**
-```python
-from contextwall_sdk import SafeOpenAI
+Nothing about the class or method contracts changed — only the import path.
 
-# OpenAI
-client = SafeOpenAI(api_key="sk-...", ctxfw_url="http://localhost:8080")
+## Full docs
 
-# Mistral, Groq, Together, Ollama — just pass base_url
-client = SafeOpenAI(api_key="...", ctxfw_url="http://localhost:8080",
-                    base_url="https://api.mistral.ai/v1")
-```
-
-**Zero-code proxy mode (any provider, no SDK changes):**
-```bash
-export ANTHROPIC_BASE_URL=http://localhost:8080/proxy/anthropic
-export OPENAI_BASE_URL=http://localhost:8080/proxy/openai
-# your existing code runs unchanged
-```
-
-Blocked requests raise `ContextWallBlockedError` with the policy violation detail.
-
-## Daemon setup
-
-Requires a running ContextWall daemon. See the [quickstart](https://contextwall.io/quickstart) or the [GitHub repo](https://github.com/bytewise-ca/context-wall).
+See [contextwall on PyPI](https://pypi.org/project/contextwall/) or the
+[GitHub repo](https://github.com/bytewise-ca/context-wall).

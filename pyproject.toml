@@ -4,15 +4,27 @@ build-backend = "hatchling.build"
 
 [project]
 name = "contextwall"
-version = "0.1.3"
-description = "ContextWall - context firewall for AI agents and RAG pipelines"
+version = "0.2.0"
+description = "Safety preflight and runtime firewall for AI agents — point at your agent, get a scorecard and release decision."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
 authors = [
     { name = "ContextWall", email = "info@bytewise.ca" },
 ]
-keywords = ["mcp", "claude", "context", "llm", "ai-agents", "context-firewall", "rag", "prompt-injection", "trust-scoring"]
+keywords = [
+    "llm-security",
+    "prompt-injection",
+    "ai-agents",
+    "ai-security",
+    "agent-security",
+    "rag",
+    "guardrails",
+    "llmops",
+    "mcp",
+    "preflight",
+    "context-firewall",
+]
 
 dependencies = [
     # web framework
@@ -25,7 +37,6 @@ dependencies = [
     "pydantic-settings>=2.0",
     # database
     "aiosqlite>=0.19",
-    "kuzu>=0.3",
     "duckdb>=0.10",
     # scheduling & watching
     "apscheduler>=3.10",
@@ -36,10 +47,6 @@ dependencies = [
     "click>=8.0",
     "rich>=13.0",
     "httpx>=0.27",
-    # runtime correlation
-    "opentelemetry-sdk>=1.20",
-    "opentelemetry-exporter-otlp-proto-grpc>=1.20",
-    "grpcio>=1.60",
     "rapidfuzz>=3.0",
     # cryptographic signing for compliance bundles
     "cryptography>=42.0",
@@ -47,16 +54,21 @@ dependencies = [
     "prometheus-client>=0.20",
     # object storage archival
     "aiobotocore>=2.0",
-    # context-compiler (direct Python import)
-    "context-compiler-mcp",
 ]
 
 [project.optional-dependencies]
+# Provider SDKs — install the ones you use with contextwall.sdk wrappers.
+anthropic = ["anthropic>=0.25"]
+openai = ["openai>=1.0"]
+all = ["anthropic>=0.25", "openai>=1.0"]
+
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
     "ruff>=0.4",
     "httpx>=0.27",
+    "anthropic>=0.25",
+    "openai>=1.0",
 ]
 
 [project.scripts]

@@ -119,9 +119,28 @@ async def _seed_git_metadata(db_path: str, repository_root: str) -> None:
         logger.warning("git metadata seed failed (non-fatal)", extra={"error": str(e)})
 
 
+def _migrate_legacy_db_path(db_path: str) -> None:
+    """One-time rename of the legacy `.ctxfw/cre.db` to the new default path.
+
+    Only runs when the configured/default path doesn't yet exist and a
+    legacy sibling does. If a user has explicitly configured a different
+    path via ctxfw.yaml, we still migrate the sibling cre.db if present
+    so nothing is silently dropped on the floor.
+    """
+    target = Path(db_path)
+    legacy = target.parent / "cre.db"
+    if legacy.exists() and not target.exists():
+        legacy.rename(target)
+        logger.warning(
+            "Migrated legacy database %s -> %s. Update storage.db_path in ctxfw.yaml if pinned.",
+            legacy, target,
+        )
+
+
 async def run_daemon(config: Config, host: str = "0.0.0.0") -> None:
     db_path = config.storage.db_path
     Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+    _migrate_legacy_db_path(db_path)
 
     # ── Startup validation ────────────────────────────────────────────────────
     if config.rest_api.auth.enabled:
@@ -129,15 +148,19 @@ async def run_daemon(config: Config, host: str = "0.0.0.0") -> None:
         if not tokens:
             logger.error(
                 "STARTUP BLOCKED: auth.enabled=true but no tokens configured. "
-                "Add at least one token to ctxfw.yaml or set CRE_API_TOKEN."
+                "Add at least one token to ctxfw.yaml or set CONTEXTWALL_API_TOKEN "
+                "(or the deprecated CRE_API_TOKEN)."
             )
             sys.exit(1)
-        _WEAK = {"", "changeme", "demo-token", "secret", "password", "token", "${CRE_API_TOKEN}"}
+        _WEAK = {
+            "", "changeme", "demo-token", "secret", "password", "token",
+            "${CONTEXTWALL_API_TOKEN}", "${CRE_API_TOKEN}",
+        }
         weak = [t for t in tokens if t.get("token", "") in _WEAK]
         if weak:
             logger.error(
                 "STARTUP BLOCKED: auth token is set to a known-weak default ('%s'). "
-                "Set a real random secret in ctxfw.yaml or via the CRE_API_TOKEN env var. "
+                "Set a real random secret in ctxfw.yaml or via the CONTEXTWALL_API_TOKEN env var. "
                 "Generate one with: python3 -c \"import secrets; print(secrets.token_urlsafe(32))\"",
                 weak[0].get("token"),
             )
@@ -146,7 +169,7 @@ async def run_daemon(config: Config, host: str = "0.0.0.0") -> None:
     if not config.compliance_hmac_key:
         logger.warning(
             "compliance_hmac_key not set - compliance bundles will use a dev key and are NOT "
-            "tamper-evident. Set CRE_COMPLIANCE_HMAC_KEY or compliance_hmac_key in ctxfw.yaml. "
+            "tamper-evident. Set CONTEXTWALL_COMPLIANCE_HMAC_KEY or compliance_hmac_key in ctxfw.yaml. "
             "Generate one with: python3 -c \"import secrets; print(secrets.token_urlsafe(32))\""
         )
 
@@ -160,16 +183,11 @@ async def run_daemon(config: Config, host: str = "0.0.0.0") -> None:
     logger.info("SQLite migrations complete", extra={"db_path": db_path})
 
     # ── Instantiate engines ───────────────────────────────────────────────────
-    from context_firewall.classifier.classifier import classify_task, build_pipeline_context
-    from context_firewall.graph.engine import RepositoryGraphEngine
+    from context_firewall.classifier.classifier import classify_task
     from context_firewall.trust.engine import TrustScoringEngine
-    from context_firewall.entropy.engine import ContextEntropyEngine
-    from context_firewall.runtime.engine import RuntimeCorrelationEngine
     from context_firewall.policy.engine import PolicyEngine
     from context_firewall.provenance.engine import ProvenanceEngine
     from context_firewall.synthesizer.synthesizer import ContextSynthesizer
-    from context_firewall.analytics.engine import AnalyticsEngine
-    from context_firewall.lint.engine import LintEngine
 
     # Wrap classify_task to match engine protocol
     _classify_task_fn = classify_task  # capture before class body redefines the name
@@ -229,27 +247,17 @@ async def run_daemon(config: Config, host: str = "0.0.0.0") -> None:
             logger.info("Auto-registered %d repo source(s) as internal", count)
     logger.info("SourceRegistry initialized")
 
-    graph = RepositoryGraphEngine()
     trust = TrustScoringEngine()
-    entropy = ContextEntropyEngine()
-    runtime = RuntimeCorrelationEngine()
     policy = PolicyEngine()
     provenance = ProvenanceEngine()
     synthesizer = ContextSynthesizer()
-    analytics = AnalyticsEngine()
-    lint = LintEngine()
     classifier_shim = _ClassifierShim()
 
     startup_order = [
-        graph,
         trust,
-        entropy,
-        runtime,
         policy,
         provenance,
         synthesizer,
-        analytics,
-        lint,
         classifier_shim,
     ]
     initialized = []
@@ -263,8 +271,6 @@ async def run_daemon(config: Config, host: str = "0.0.0.0") -> None:
             else:
                 await engine.init(config)
             initialized.append(engine)
-            # Check actual health after init - some engines (e.g. graph) init successfully
-            # even when their backing store isn't ready, and only report degraded via health_check.
             if hasattr(engine, "health_check"):
                 h = engine.health_check()
                 if h.healthy:
@@ -309,15 +315,10 @@ async def run_daemon(config: Config, host: str = "0.0.0.0") -> None:
 
     engines = {
         "classifier": classifier_shim,
-        "graph": graph,
         "trust": trust,
-        "entropy": entropy,
-        "runtime": runtime,
         "policy": policy,
         "provenance": provenance,
         "synthesizer": synthesizer,
-        "analytics": analytics,
-        "lint": lint,
         "source_registry": source_registry,
     }
 
@@ -348,11 +349,10 @@ async def run_daemon(config: Config, host: str = "0.0.0.0") -> None:
     from context_firewall.api.app import create_app
     app = create_app(config, engines)
 
-    # ── Offline job scheduler ────────────────────────────────────────────────
+    # ── Offline job scheduler (kept as hook; no jobs scheduled by default) ────
     scheduler = AsyncIOScheduler()
-    _setup_jobs(scheduler, config, engines)
     scheduler.start()
-    logger.info("APScheduler started")
+    logger.info("APScheduler started (no default jobs)")
 
     # ── PID file ──────────────────────────────────────────────────────────────
     pid_file = Path(config.daemon.pid_file)
@@ -390,50 +390,7 @@ async def run_daemon(config: Config, host: str = "0.0.0.0") -> None:
     await server.serve()
 
 
-def _setup_jobs(scheduler: AsyncIOScheduler, config: Config, engines: dict) -> None:
-    analytics = engines.get("analytics")
-    entropy = engines.get("entropy")
-    lint = engines.get("lint")
-
-    if analytics:
-        scheduler.add_job(
-            analytics.compute_and_store_snapshots,
-            "cron",
-            minute="0", hour="*/6",
-            id="analytics_snapshots",
-            replace_existing=True,
-        )
-
-    if entropy:
-        async def _run_entropy():
-            await entropy.run_analysis(config.repository_root)
-
-        scheduler.add_job(
-            _run_entropy,
-            "cron",
-            minute="0", hour="*/6",
-            id="entropy_computation",
-            replace_existing=True,
-        )
-
-    if lint:
-        async def _run_lint():
-            await lint.run(window_days=30)
-
-        scheduler.add_job(
-            _run_lint,
-            "cron",
-            # Run once daily at 03:00 UTC - light query load, results ready for morning review
-            hour="3",
-            minute="0",
-            id="lint_audit",
-            replace_existing=True,
-        )
-
-
-
 def main():
-    import os
     config_path = os.environ.get("CTXFW_CONFIG", "ctxfw.yaml")
     config = load_config(config_path)
     asyncio.run(run_daemon(config))
