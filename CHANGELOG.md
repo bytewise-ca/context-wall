@@ -4,6 +4,17 @@ All notable changes to ContextWall are recorded here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project
 adheres to [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] — 2026-09
+
+### Fixed
+
+- **`uvx contextwall <command>` now runs the CLI.** Adds a `contextwall`
+  script entry aliasing the existing `ctxfw` executable. Before 0.2.1,
+  `uvx contextwall check` failed with `An executable named "contextwall"
+  is not provided by package "contextwall"` because the executable
+  (`ctxfw`) didn't match the package name. The `ctxfw` and `ctxfwd`
+  entry points remain — nothing existing changes.
+
 ## [0.2.0] — 2026-09
 
 The **consolidation** release. The SDK now ships inside the main `contextwall`

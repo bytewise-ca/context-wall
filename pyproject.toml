@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "contextwall"
-version = "0.2.0"
+version = "0.2.1"
 description = "Safety preflight and runtime firewall for AI agents — point at your agent, get a scorecard and release decision."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -74,6 +74,9 @@ dev = [
 [project.scripts]
 ctxfw = "context_firewall.cli.main:cli"
 ctxfwd = "context_firewall.daemon.main:main"
+# Alias so `uvx contextwall <cmd>` works (executable name must match the
+# package name for the implicit uvx invocation). Same entry point as ctxfw.
+contextwall = "context_firewall.cli.main:cli"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/context_firewall"]
